@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>hosa27 Brain Health Check</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="hosa27">
+  <meta name="theme-color" content="#0f766e">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css?v=0.5.0">
+</head>
+<body>
+  <div id="rbar" class="rbar hidden"></div>
+  <div id="app"></div>
+
+  <!-- Staff-only controls during a session -->
+  <button id="helpBtn" class="staff-help hidden" aria-label="Staff: log help">staff</button>
+  <div id="staffCorner" class="staff-corner hidden" aria-hidden="true"></div>
+  <div id="overlay" class="overlay hidden"></div>
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="tasks.js?v=0.5.0"></script>
+  <script src="audio/audio_manifest.js?v=0.5.0"></script>
+  <script src="app.js?v=0.5.0"></script>
+</body>
+</html>

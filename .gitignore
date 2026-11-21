@@ -1,0 +1,6 @@
+# Participant data must never go online (GitHub Pages publishes this repo)
+data/
+*.json.bak
+.venv/
+__pycache__/
+.DS_Store
