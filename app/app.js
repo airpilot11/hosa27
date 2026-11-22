@@ -157,6 +157,7 @@
   if (window.speechSynthesis) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
 
   const rateMult = () => (R.on && R.voice === "fast" ? 1.8 : 1);
+  const sentencePause = () => (VOICE.sentencePauseMs ?? 600) / rateMult(); // calm pause between sentences
   function muted() { return R.on && R.voice === "mute"; }
 
   // ---------------------------------------------------------------- subtitles (captions)
@@ -272,10 +273,10 @@
     const my = playGen; const live = () => my === playGen;
     const rec = RECORDED_AUDIO[step.id];
     if (rec && rec.parts) {                               // generated voice pack: one file per sentence
-      for (const p of rec.parts) { await playFile(p.src, { cap: showCaption(p.text) }); if (!live()) return; await sleep(120); }
+      for (const p of rec.parts) { if (!live()) return; await playFile(p.src, { cap: showCaption(p.text) }); if (!live()) return; await sleep(muted() ? 0 : sentencePause()); }
       if (rec.seq && rec.seq.length) {
         await sleep(500); if (!live()) return; showCaption("", { listen: true }); lockPause(true); // no pausing mid-list
-        for (const s of rec.seq) { await playFile(s); if (!live()) return; await sleep(muted() ? 0 : (rec.seqGapMs ?? 700)); }
+        for (const s of rec.seq) { if (!live()) return; await playFile(s); if (!live()) return; await sleep(muted() ? 0 : (rec.seqGapMs ?? 700)); }
         lockPause(false);
       }
     } else if (rec) {                                     // own single-file recording: captions follow the recording's progress
@@ -285,14 +286,14 @@
       if (!live()) return;
       if (!(typeof rec === "object" && rec.includesSequence) && step.sequence) await speakSequence(step, live);
     } else {                                              // built-in device voice, sentence by sentence
-      for (const s of splitSentences(step.say)) { await speakText(s, { cap: showCaption(s) }); if (!live()) return; await sleep(150); }
+      for (const s of splitSentences(step.say)) { if (!live()) return; await speakText(s, { cap: showCaption(s) }); if (!live()) return; await sleep(muted() ? 0 : sentencePause()); }
       if (step.sequence) await speakSequence(step, live);
     }
     if (live()) clearCaption();
   }
   async function speakSequence(step, live) {
     await sleep(600); if (!live()) return; showCaption("", { listen: true }); lockPause(true);
-    for (const item of step.sequence) { await speakText(item); if (!live()) return; await sleep(muted() ? 0 : (step.sequenceGapMs ?? 1000)); }
+    for (const item of step.sequence) { if (!live()) return; await speakText(item); if (!live()) return; await sleep(muted() ? 0 : (step.sequenceGapMs ?? 1000)); }
     lockPause(false);
   }
   function stopSpeech() {
@@ -438,8 +439,9 @@
           <label class="switch"><input type="checkbox" id="rmode" ${R.on ? "checked" : ""}><span></span></label></div>
         <div class="toggle ${R.on ? "" : "hidden"}" id="rmicRow"><div>Record with the microphone<small>Only for testing recording in researcher mode.</small></div>
           <label class="switch"><input type="checkbox" id="rmic" ${R.mic ? "checked" : ""}><span></span></label></div>
-        <div class="toggle"><div>Larger text<small>For participants who find the text hard to read.</small></div>
+        <div class="toggle"><div>Larger text<small>For participants who find the text hard to read. Makes every participant screen about 30% bigger (this staff screen stays the same).</small></div>
           <label class="switch"><input type="checkbox" id="xl" ${store.get("hosa27.xl") === "1" ? "checked" : ""}><span></span></label></div>
+        <div class="xl-preview" aria-hidden="true">Participant text preview: <b>What day of the week is it today?</b></div>
         ${voiceBlock}
       </section>
       <section class="panel">
@@ -1376,44 +1378,48 @@
     playInstruction(step);
   }
 
-  // --- letter tap (vigilance)
+  // --- letter tap (vigilance): letters are SHOWN one at a time (not spoken); tap for the target letter
   function vigilanceStep(step) {
     const item = itemBase(step); item.onsets = []; item.taps = [];
+    const showMs = step.showMs ?? 2000, gapMs = step.gapMs ?? 300, interval = showMs + gapMs;
+    item.mode = "visual"; item.showMs = showMs; item.gapMs = gapMs;
     $app.innerHTML = shell(`
       ${chip(step)}
       <h2 class="prompt">${esc(step.text)}</h2>
       <div class="caption" id="cap" aria-live="polite"></div>
-      <button class="tap-target" id="tap" disabled>TAP</button>
+      <div class="vig-row">
+        <div class="letter-box" id="lbox" aria-live="off"></div>
+        <button class="tap-target" id="tap" disabled>TAP</button>
+      </div>
       <div class="status" id="status">Please listen…</div>`);
     wirePause();
-    const $tap = $("tap"), $status = $("status");
+    const $tap = $("tap"), $status = $("status"), $lbox = $("lbox");
     let cancelled = false, t0 = 0; abortStep = () => { cancelled = true; stopSpeech(); };
-    // preload recorded letters (voice pack) into memory so each letter plays exactly on time
-    const letterSrcs = [...new Set(step.letters)].map((L) => LETTER_AUDIO[L]).filter(Boolean);
-    letterSrcs.forEach((s) => loadBuf(s).catch(() => {}));
-    const sayLetter = (L, onstart) => {
-      if (LETTER_AUDIO[L]) playFile(LETTER_AUDIO[L], { onstart });
-      else speakText(L, { onstart });
-    };
+    const waitUntil = async (t) => { const w = t - now(); if (w > 0) await sleep(w); };
     $tap.addEventListener("pointerdown", () => {
       if ($tap.disabled) return; item.taps.push(Math.round(now() - t0));
       $tap.classList.add("flash"); setTimeout(() => $tap.classList.remove("flash"), 150);
     });
     (async () => {
       await playInstruction(step); if (cancelled) return;
-      $status.textContent = "Get ready…"; showCaption("", { listen: true }); await sleep(900); if (cancelled) return;
-      $tap.disabled = false; $status.textContent = `Tap for the letter ${step.target}`; t0 = now();
+      clearCaption();
+      $status.textContent = "Get ready…"; $lbox.classList.add("ready"); await sleep(1500); if (cancelled) return;
+      $lbox.classList.remove("ready");
+      $tap.disabled = false; $status.textContent = `Tap when you see ${step.target}`; t0 = now();
       for (let i = 0; i < step.letters.length; i++) {
         if (cancelled) return;
-        const due = t0 + i * step.intervalMs; const wait = due - now(); if (wait > 0) await sleep(wait);
+        const due = t0 + i * interval; await waitUntil(due); if (cancelled) return;
         const letter = step.letters[i]; const rec = { letter, scheduled: Math.round(due - t0), onset: null };
         item.onsets.push(rec);
-        sayLetter(letter, (t) => (rec.onset = Math.round(t - t0)));
+        $lbox.textContent = letter; $lbox.classList.add("on");
+        requestAnimationFrame(() => { rec.onset = Math.round(now() - t0); }); // when the letter is actually painted
+        await waitUntil(due + showMs); if (cancelled) return;
+        $lbox.textContent = ""; $lbox.classList.remove("on");
       }
-      await sleep(step.intervalMs + 600); if (cancelled) return;
-      $tap.disabled = true; clearCaption();
-      // score: a tap within 0-1.5 s after an M = hit; other taps = false alarms
-      const windowMs = 1500; const used = new Set(); let hits = 0, misses = 0;
+      await waitUntil(t0 + step.letters.length * interval + 400); if (cancelled) return;
+      $tap.disabled = true;
+      // score: a tap from when an M appears until the next letter appears = hit; any other tap = false alarm
+      const windowMs = interval; const used = new Set(); let hits = 0, misses = 0;
       item.onsets.forEach((o) => {
         if (o.letter !== step.target) return;
         const start = o.onset ?? o.scheduled;

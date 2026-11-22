@@ -6,7 +6,7 @@
 // collection starts. The version number is saved into every session.
 // =====================================================================
 
-const HOSA27_VERSION = "0.5.0";
+const HOSA27_VERSION = "0.6.0";
 
 // What participants see (header, welcome screen, footer). Edit freely.
 const STUDY = {
@@ -27,20 +27,21 @@ const DOMAIN_LABELS = {
 // which tools/make_voice_audio.py creates (natural Mac voice OR your own recordings).
 // Any step without a recording is read aloud by the iPad's built-in voice.
 const RECORDED_AUDIO = {};   // step id -> { src, includesSequence }
-const LETTER_AUDIO = {};     // letter -> audio file (for the letter-tap task)
+const LETTER_AUDIO = {};     // (unused since v0.6.0: the letter task is shown on screen, not spoken)
 const AUDIO_PACK_INFO = {};  // which voice made the pack, and when
 
 // Speech settings for the built-in voice.
 const VOICE = {
   preferredNames: ["Samantha", "Karen", "Daniel", "Google US English"],
   lang: "en-US",
-  rate: 0.85,
+  rate: 0.72,          // slow, calm pace (1 = normal)
+  sentencePauseMs: 600, // silence between sentences of an instruction
 };
 
 // Original 5-word list (different from the SLUMS word list).
 const WORDS = ["river", "candle", "jacket", "garden", "violin"];
 
-// Letter-tap (vigilance) sequence. Target letter = M (10 targets).
+// Letter-tap (vigilance) sequence, SHOWN on screen one letter at a time. Target letter = M (10 targets).
 const LETTERS = ["K","M","T","R","M","M","B","L","M","D","S","M",
                  "F","M","M","Q","C","M","H","W","M","P","M","G"];
 
@@ -73,7 +74,7 @@ const STEPS = [
   { id: "welcome", type: "intro", max: 0, scoredBy: "none",
     title: "Brain Health Check",
     text: "There are no wrong answers.\nJust do your best.",
-    say: "Welcome. This brain health check takes about seven minutes. There are no wrong answers. Just do your best. First, listen to each question. When you hear a soft chime and see the words Your turn, speak your answer out loud. Tap Start when you are ready." },
+    say: "Welcome. This check takes about seven minutes. There are no wrong answers. Just do your best. Listen to each question. When you hear a chime and see Your turn, say your answer out loud. Tap Start when you are ready." },
 
   // ---- Orientation (6) ----
   { id: "orient_day", type: "speak", domain: "Orientation", max: 1, scoredBy: "ai_speech",
@@ -98,27 +99,27 @@ const STEPS = [
   // ---- Memory: learning (not scored, needed for delayed recall) ----
   { id: "learn_1", type: "speak", domain: "Memory", max: 0, scoredBy: "none",
     text: "Listen to 5 words.\nThen say all the words you remember.",
-    say: "I am going to say five words. Listen carefully. When I am done, say all the words you remember, in any order.",
-    sequence: WORDS, sequenceGapMs: 1100, maxSeconds: 25, allowReplay: false, key: WORDS.join(", ") },
+    say: "I will say five words. Listen carefully. When I finish, say all the words you remember. Any order is fine.",
+    sequence: WORDS, sequenceGapMs: 1500, maxSeconds: 25, allowReplay: false, key: WORDS.join(", ") },
   { id: "learn_2", type: "speak", domain: "Memory", max: 0, scoredBy: "none",
     text: "Listen to the same 5 words again.\nThen say all the words you remember.",
-    say: "I will say the same five words again. Please remember them, because I will ask you for them later. When I am done, say all the words you remember.",
-    sequence: WORDS, sequenceGapMs: 1100, maxSeconds: 25, allowReplay: false, key: WORDS.join(", ") },
+    say: "I will say the same five words again. Try to remember them. I will ask for them again later. When I finish, say all the words you remember.",
+    sequence: WORDS, sequenceGapMs: 1500, maxSeconds: 25, allowReplay: false, key: WORDS.join(", ") },
 
   // ---- Executive function: trail (2) ----
   { id: "trail_practice", type: "trail", domain: "Executive", max: 0, scoredBy: "none", practice: true,
     text: "Practice: tap 1, then A, then 2, then B.",
-    say: "Let's practice. Tap the circles in order, going between numbers and letters. Tap one, then A, then two, then B.",
+    say: "Let's practice. Tap the circles in order. Switch between numbers and letters. Tap one, then A, then two, then B.",
     circles: TRAIL_PRACTICE, timeLimitSec: 60 },
   { id: "trail", type: "trail", domain: "Executive", max: 2, scoredBy: "app_logic",
     text: "Tap in order: 1 → A → 2 → B → 3 → C …",
-    say: "Now do the same with more circles. Tap one, then A, then two, then B, then three, then C, and keep going until the end. Work as quickly and carefully as you can.",
+    say: "Now try it with more circles. Tap one, then A, then two, then B, and keep going to the end. Go as quickly and carefully as you can.",
     circles: TRAIL_MAIN, timeLimitSec: 120 },
 
   // ---- Visuospatial: clock (3) ----
   { id: "clock", type: "draw", domain: "Visuospatial", max: 3, scoredBy: "ai_vision",
     text: "Draw a clock. Put in all the numbers.\nSet the hands to twenty past eight (8:20).",
-    say: "Please draw a clock. Put in all the numbers, and set the hands to twenty past eight. Use your finger. Tap Done when you are finished.",
+    say: "Please draw a clock with all the numbers. Set the hands to twenty past eight. Use your finger. Tap Done when you are finished.",
     allowReplay: true, key: "8:20" },
 
   // ---- Naming (3) ----
@@ -135,30 +136,30 @@ const STEPS = [
   // ---- Attention (6) ----
   { id: "digits_5", type: "speak", domain: "Attention", max: 1, scoredBy: "ai_speech",
     text: "Listen to the numbers.\nThen say them back in the same order.",
-    say: "I will say some numbers. When I am done, say them back in the same order.",
+    say: "I will say some numbers. When I finish, say them back in the same order.",
     sequence: ["4", "9", "3", "7", "1"], sequenceGapMs: 1000, maxSeconds: 15, allowReplay: false, key: "4 9 3 7 1" },
   { id: "digits_6", type: "speak", domain: "Attention", max: 1, scoredBy: "ai_speech",
     text: "Listen to the numbers.\nThen say them back in the same order.",
-    say: "Here are some more numbers. When I am done, say them back in the same order.",
+    say: "Here are some more numbers. When I finish, say them back in the same order.",
     sequence: ["8", "2", "6", "4", "9", "3"], sequenceGapMs: 1000, maxSeconds: 15, allowReplay: false, key: "8 2 6 4 9 3" },
   { id: "letters", type: "vigilance", domain: "Attention", max: 1, scoredBy: "app_logic",
-    text: "Tap the big button every time you hear the letter M.",
-    say: "I will read some letters. Tap the big button every time you hear the letter M. Do not tap for other letters. Get ready.",
-    letters: LETTERS, target: "M", intervalMs: 1200 },
+    text: "Tap the big button every time you SEE the letter M.",
+    say: "Letters will appear on the screen, one at a time. Tap the big button every time you see the letter M. Do not tap for any other letter. Get ready.",
+    letters: LETTERS, target: "M", showMs: 2000, gapMs: 300 },  // each letter shown 2 s, then 0.3 s blank
   { id: "serial3", type: "speak", domain: "Attention", max: 3, scoredBy: "ai_speech",
     text: "Start at 50. Take away 3, and keep taking away 3.\nSay five answers out loud.",
-    say: "Start at fifty and take away three. Then keep taking away three from each answer. Say five answers out loud.",
+    say: "Start at fifty. Take away three. Keep taking away three from each answer. Say five answers out loud.",
     maxSeconds: 45, allowReplay: true, key: "47, 44, 41, 38, 35" },
 
   // ---- Language (3) ----
   { id: "sentence_1", type: "speak", domain: "Language", max: 1, scoredBy: "ai_speech",
     text: "Repeat the sentence exactly.",
-    say: "I will say a sentence. Repeat it exactly as I say it.",
+    say: "I will say a sentence. Repeat it exactly the way I say it.",
     sequence: ["The tall man carried a red umbrella to the market on Tuesday."], sequenceGapMs: 300,
     maxSeconds: 15, allowReplay: false, key: "The tall man carried a red umbrella to the market on Tuesday." },
   { id: "sentence_2", type: "speak", domain: "Language", max: 1, scoredBy: "ai_speech",
     text: "Repeat the sentence exactly.",
-    say: "Here is another sentence. Repeat it exactly.",
+    say: "Here is another sentence. Repeat it exactly the way I say it.",
     sequence: ["Grandma baked three loaves of bread before the snowstorm arrived."], sequenceGapMs: 300,
     maxSeconds: 15, allowReplay: false, key: "Grandma baked three loaves of bread before the snowstorm arrived." },
   { id: "fluency", type: "speak", domain: "Language", max: 1, scoredBy: "ai_speech",
@@ -177,7 +178,7 @@ const STEPS = [
   // ---- Delayed memory (5) ----
   { id: "recall", type: "speak", domain: "Delayed memory", max: 5, scoredBy: "ai_speech",
     text: "Earlier you heard 5 words.\nSay all the words you remember.",
-    say: "Earlier, I said five words and asked you to remember them. Please say all the words you remember.",
+    say: "Earlier, I said five words. Please say all the words you remember.",
     maxSeconds: 30, allowReplay: false, key: WORDS.join(", ") },
 
   { id: "end", type: "end", max: 0, scoredBy: "none",

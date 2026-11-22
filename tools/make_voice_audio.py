@@ -7,7 +7,7 @@ Two ways to make it:
      1. Download a free "Premium" voice: System Settings > Accessibility > Spoken Content >
         System Voice > Manage Voices… > English (US) > tick "Ava (Premium)" (or Zoe / Evan / Nathan Premium).
      2. python3 tools/make_voice_audio.py                 (picks the best installed voice automatically)
-        python3 tools/make_voice_audio.py --voice "Zoe (Premium)" --rate 160
+        python3 tools/make_voice_audio.py --voice "Zoe (Premium)" --rate 135
 
   B) Your OWN recorded voice (most natural)
      1. python3 tools/make_voice_audio.py --script-only   -> writes app/audio/RECORDING_SCRIPT.md
@@ -96,8 +96,6 @@ def write_script(data):
     for st in data["steps"]:
         if st.get("say"):
             lines.append(f"| `{st['id']}.m4a` | {step_text(st, silence=False)} |")
-    for L in sorted(set(data["letters"])):
-        lines.append(f"| `letter_{L}.m4a` | The letter \"{L}\" only (short and clear) |")
     (AUDIO / "RECORDING_SCRIPT.md").write_text("\n".join(lines) + "\n")
     print("wrote", AUDIO / "RECORDING_SCRIPT.md")
 
@@ -114,7 +112,7 @@ def write_manifest(rec, letters, info, files):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--voice", help='Mac voice name, e.g. "Ava (Premium)" (default: best installed)')
-    ap.add_argument("--rate", type=int, default=160, help="words per minute (default 160; normal speech ~175)")
+    ap.add_argument("--rate", type=int, default=135, help="words per minute (default 135 = calm and slow; normal speech ~175)")
     ap.add_argument("--own", action="store_true", help="use your own recordings from app/audio/own/")
     ap.add_argument("--script-only", action="store_true", help="only write the recording script")
     ap.add_argument("--list-voices", action="store_true")
@@ -173,13 +171,7 @@ def main():
                 entry["seqGapMs"] = max(250, int(st.get("sequenceGapMs", 1000)) - 450)
             rec[st["id"]] = entry
         print(f"  ✓ {st['id']}")
-    for L in sorted(set(data["letters"])):
-        name = f"letter_{L}.m4a"
-        if args.own and (OWN / name).exists():
-            letters[L] = f"audio/own/{name}"; files.append(f"own/{name}"); own_used += 1
-        else:
-            say_to_file(L, AUDIO / name, voice, args.rate)
-            letters[L] = f"audio/{name}"; files.append(name)
+    # (no letter files: since v0.6.0 the letter-tap task shows the letters on screen instead of speaking them)
     info = {"voice": (f"own recordings ({own_used} files) + {voice}" if args.own else voice),
             "rate": args.rate, "created": datetime.now().isoformat(timespec="seconds")}
     write_manifest(rec, letters, info, files)

@@ -36,7 +36,7 @@ Open **http://localhost:8027/?researcher=1**, or tick **🔧 Researcher mode** o
 Practice runs are marked as practice and the scoring tools ignore them. The microphone is off unless you tick "Also record with the microphone".
 
 ### Voice and subtitles
-- **Subtitles:** every spoken instruction appears under the question with the current word highlighted as it's spoken. Words, numbers, sentences and letters that participants must **remember or repeat are never shown**; the subtitle says "🔊 Listen carefully…" instead, so the memory tasks stay listening tasks.
+- **Subtitles:** every spoken instruction appears under the question with the current word highlighted as it's spoken. Words, numbers and sentences that participants must **remember or repeat are never shown**; the subtitle says "🔊 Listen carefully…" instead, so the memory tasks stay listening tasks.
 - **Why audio files:** the browser's built-in voice can silently fail. This happened in Chrome on the Mac: it accepted the request but never spoke. The app therefore plays a **voice pack** of real audio files through Web Audio, which is reliable on iPad and Mac. If there's no pack and the device voice stalls, the app detects it after 2.5 s, shows a staff warning, and continues with subtitles only.
 - A voice pack made with the Mac's **Samantha** voice is included now (96 files: one per sentence, plus one per word or number to remember). Re-run the tool after downloading a Premium voice for a more natural sound:
 
@@ -47,7 +47,7 @@ The app plays a **voice pack** (one audio file per instruction) when there is on
   ```bash
   python3 tools/make_voice_audio.py
   ```
-  To pick the voice and speed yourself: `--voice "Zoe (Premium)" --rate 150`. To see installed voices: `--list-voices`.
+  To pick the voice and speed yourself: `--voice "Zoe (Premium)" --rate 135`. To see installed voices: `--list-voices`.
 - **Option B: your own voice (most natural).** Record every line listed in **`app/audio/RECORDING_SCRIPT.md`** (Voice Memos is fine) and save each one with the listed file name in **`app/audio/own/`**. Then run:
   ```bash
   python3 tools/make_voice_audio.py --own
