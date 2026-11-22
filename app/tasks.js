@@ -6,20 +6,20 @@
 // collection starts. The version number is saved into every session.
 // =====================================================================
 
-const HOSA27_VERSION = "0.6.0";
+const HOSA27_VERSION = "0.7.0";
 
 // What participants see (header, welcome screen, footer). Edit freely.
 const STUDY = {
   appName: "Brain Health Check",
   tagline: "A short check of memory and thinking",
   footer: "Student research study (HOSA) · This is not a medical test and does not give a diagnosis",
-  minutes: 7,
+  minutes: 10,
 };
 
 // Friendly section names shown on each question card.
 const DOMAIN_LABELS = {
   "Orientation": "Today & here", "Memory": "Memory", "Executive": "Connect the dots",
-  "Visuospatial": "Drawing", "Naming": "Naming", "Attention": "Attention",
+  "Visuospatial": "Shapes", "Naming": "Naming", "Attention": "Attention",
   "Language": "Language", "Abstraction": "Reasoning", "Delayed memory": "Memory",
 };
 
@@ -38,45 +38,65 @@ const VOICE = {
   sentencePauseMs: 600, // silence between sentences of an instruction
 };
 
-// Original 5-word list (different from the SLUMS word list).
-const WORDS = ["river", "candle", "jacket", "garden", "violin"];
+// ---------------------------------------------------------------------
+// v0.7.0 item set. Same 8 thinking-skill areas as the MoCA, 30 points total, but every
+// item is ORIGINAL and none repeats the paper SLUMS (no animal naming, no clock, no money
+// math, no backward digits, no story, no SLUMS words). Items are harder / more graded than
+// v0.6 so healthy older adults don't all score 28-30.
+// ---------------------------------------------------------------------
 
-// Letter-tap (vigilance) sequence, SHOWN on screen one letter at a time. Target letter = M (10 targets).
-const LETTERS = ["K","M","T","R","M","M","B","L","M","D","S","M",
-                 "F","M","M","Q","C","M","H","W","M","P","M","G"];
+// 5-word list (not the SLUMS or MoCA words). Learned twice, recalled at the end, then recognized.
+const WORDS = ["river", "candle", "jacket", "garden", "violin"];
+// Recognition: the 5 words + 5 look-alike / related lures, in a fixed mixed order.
+const RECOGNITION = ["stream", "candle", "coat", "violin", "garden", "lamp", "guitar", "jacket", "yard", "river"];
+
+// Letter-tap (visual vigilance): target M (8 targets) among letters, including look-alikes N and W.
+const LETTERS = ["T","M","N","R","M","W","B","M","N","S","M","H",
+                 "W","M","K","N","M","P","W","M","D","N","M","L"];
 
 // Trail positions are percentages of the tap area (x, y).
 const TRAIL_PRACTICE = [
   { label: "1", x: 22, y: 30 }, { label: "A", x: 72, y: 24 },
   { label: "2", x: 36, y: 72 }, { label: "B", x: 80, y: 70 },
 ];
+// 12 circles (1-6, A-F) in 3 rows of 4; the middle row is shifted so no two circles crowd on any iPad screen.
 const TRAIL_MAIN = [
-  { label: "1", x: 15, y: 18 }, { label: "A", x: 46, y: 12 },
-  { label: "2", x: 82, y: 20 }, { label: "B", x: 62, y: 40 },
-  { label: "3", x: 24, y: 44 }, { label: "C", x: 12, y: 76 },
-  { label: "4", x: 42, y: 66 }, { label: "D", x: 72, y: 62 },
-  { label: "5", x: 88, y: 84 }, { label: "E", x: 54, y: 88 },
+  { label: "1", x: 32, y: 50 }, { label: "A", x: 12, y: 8 },  { label: "2", x: 64, y: 8 },
+  { label: "B", x: 58, y: 50 }, { label: "3", x: 90, y: 92 }, { label: "C", x: 38, y: 92 },
+  { label: "4", x: 6,  y: 50 }, { label: "D", x: 38, y: 8 },  { label: "5", x: 90, y: 8 },
+  { label: "E", x: 84, y: 50 }, { label: "6", x: 64, y: 92 }, { label: "F", x: 12, y: 92 },
 ];
+
+// Shape-turning (mental rotation): blocks of a shape as [column, row]. The top shape is shown upright;
+// each choice is the shape turned by `rot` degrees, and `mirror: true` means flipped (= NOT the same shape).
+// Exactly one choice per trial has mirror: false - that is the correct answer.
+const SHAPES = {
+  L: [[0, 0], [0, 1], [0, 2], [1, 2]],              // practice
+  P: [[0, 0], [1, 0], [0, 1], [1, 1], [0, 2]],
+  F: [[1, 0], [2, 0], [0, 1], [1, 1], [1, 2]],
+};
 
 // ---------------------------------------------------------------------
 // STEPS run in this order. Fields:
-//   type      intro | speak | trail | draw | vigilance | end
+//   type      intro | speak | trail | draw | rotate | vigilance | recognize | end
 //   domain    MoCA thinking-skill area (for analysis)
-//   max       points for this item (0 = not scored)
+//   max       points for this item (0 = not in the 30-point total)
 //   scoredBy  ai_speech | ai_vision | app_logic | none
+//   countOnly AI/human scorers still count words (raw_count) for a research variable, 0 points
 //   say       spoken instruction;  text = what is shown on screen
 //   sequence  items read one at a time after `say` (words, digits...)
 //   maxSeconds recording limit; countdown = show a timer, no Done button
 //   allowReplay  participant may hear the instruction again
 //   key       answer key used by human + AI scorers
+// Every item also records timing (see README "Timing variables").
 // ---------------------------------------------------------------------
 const STEPS = [
   { id: "welcome", type: "intro", max: 0, scoredBy: "none",
     title: "Brain Health Check",
     text: "There are no wrong answers.\nJust do your best.",
-    say: "Welcome. This check takes about seven minutes. There are no wrong answers. Just do your best. Listen to each question. When you hear a chime and see Your turn, say your answer out loud. Tap Start when you are ready." },
+    say: "Welcome. This check takes about ten minutes. Some questions are easy and some are hard. That is normal. Just do your best. Listen to each question. When you hear a chime and see Your turn, say your answer out loud. Tap Start when you are ready." },
 
-  // ---- Orientation (6) ----
+  // ---- Orientation (6) - kept standard: there is little room to change these ----
   { id: "orient_day", type: "speak", domain: "Orientation", max: 1, scoredBy: "ai_speech",
     text: "What day of the week is it today?", say: "What day of the week is it today?",
     maxSeconds: 15, allowReplay: true, key: "{weekday}" },
@@ -96,90 +116,106 @@ const STEPS = [
     text: "What city are we in?", say: "What city are we in?",
     maxSeconds: 15, allowReplay: true, key: "{city}" },
 
-  // ---- Memory: learning (not scored, needed for delayed recall) ----
-  { id: "learn_1", type: "speak", domain: "Memory", max: 0, scoredBy: "none",
+  // ---- Memory: learning (0 points, but words recalled are counted = learning variable) ----
+  { id: "learn_1", type: "speak", domain: "Memory", max: 0, scoredBy: "ai_speech", countOnly: true,
     text: "Listen to 5 words.\nThen say all the words you remember.",
     say: "I will say five words. Listen carefully. When I finish, say all the words you remember. Any order is fine.",
     sequence: WORDS, sequenceGapMs: 1500, maxSeconds: 25, allowReplay: false, key: WORDS.join(", ") },
-  { id: "learn_2", type: "speak", domain: "Memory", max: 0, scoredBy: "none",
+  { id: "learn_2", type: "speak", domain: "Memory", max: 0, scoredBy: "ai_speech", countOnly: true,
     text: "Listen to the same 5 words again.\nThen say all the words you remember.",
     say: "I will say the same five words again. Try to remember them. I will ask for them again later. When I finish, say all the words you remember.",
     sequence: WORDS, sequenceGapMs: 1500, maxSeconds: 25, allowReplay: false, key: WORDS.join(", ") },
 
-  // ---- Executive function: trail (2) ----
+  // ---- Executive function: trail, 12 circles (2) ----
   { id: "trail_practice", type: "trail", domain: "Executive", max: 0, scoredBy: "none", practice: true,
     text: "Practice: tap 1, then A, then 2, then B.",
     say: "Let's practice. Tap the circles in order. Switch between numbers and letters. Tap one, then A, then two, then B.",
     circles: TRAIL_PRACTICE, timeLimitSec: 60 },
   { id: "trail", type: "trail", domain: "Executive", max: 2, scoredBy: "app_logic",
-    text: "Tap in order: 1 → A → 2 → B → 3 → C …",
-    say: "Now try it with more circles. Tap one, then A, then two, then B, and keep going to the end. Go as quickly and carefully as you can.",
-    circles: TRAIL_MAIN, timeLimitSec: 120 },
+    text: "Tap in order: 1 → A → 2 → B → 3 → C … up to 6 → F",
+    say: "Now try it with more circles. Tap one, then A, then two, then B, and keep going until you reach six, then F. Go as quickly and carefully as you can.",
+    circles: TRAIL_MAIN, timeLimitSec: 150 },
 
-  // ---- Visuospatial: clock (3) ----
-  { id: "clock", type: "draw", domain: "Visuospatial", max: 3, scoredBy: "ai_vision",
-    text: "Draw a clock. Put in all the numbers.\nSet the hands to twenty past eight (8:20).",
-    say: "Please draw a clock with all the numbers. Set the hands to twenty past eight. Use your finger. Tap Done when you are finished.",
-    allowReplay: true, key: "8:20" },
+  // ---- Visuospatial (3): copy a box (1, AI-scored drawing) + shape turning (2, scored by the app) ----
+  { id: "copy_box", type: "draw", domain: "Visuospatial", max: 1, scoredBy: "ai_vision", figure: "box",
+    text: "Copy this box as carefully as you can.",
+    say: "Look at the box. Please copy it in the empty drawing space, as carefully as you can. Draw every line you see. Use your finger. Tap Done when you are finished.",
+    allowReplay: true, key: "3-D box: 12 lines (front face, back face, 4 connecting edges), parallel edges roughly parallel" },
+  { id: "rotate_practice", type: "rotate", domain: "Visuospatial", max: 0, scoredBy: "none", practice: true,
+    shape: "L", choices: [{ rot: 90, mirror: true }, { rot: 0, mirror: true }, { rot: 180, mirror: false }, { rot: 270, mirror: true }],
+    text: "Which shape is the SAME as the top shape, just turned?",
+    say: "Look at the shape at the top. One shape below is the same shape, just turned around. The others are flipped over, like in a mirror. Tap the one that is the same. Let's practice." },
+  { id: "rotate_1", type: "rotate", domain: "Visuospatial", max: 1, scoredBy: "app_logic",
+    shape: "P", choices: [{ rot: 180, mirror: true }, { rot: 90, mirror: false }, { rot: 270, mirror: true }, { rot: 0, mirror: true }],
+    text: "Tap the shape that is the SAME, just turned.",
+    say: "Now try this one. Tap the shape that is the same as the top shape, just turned." },
+  { id: "rotate_2", type: "rotate", domain: "Visuospatial", max: 1, scoredBy: "app_logic",
+    shape: "F", choices: [{ rot: 90, mirror: true }, { rot: 270, mirror: true }, { rot: 0, mirror: true }, { rot: 270, mirror: false }],
+    text: "Tap the shape that is the SAME, just turned.",
+    say: "One more. Tap the shape that is the same, just turned." },
 
-  // ---- Naming (3) ----
+  // ---- Naming (3): less common objects (pictures are the iPad's built-in emoji) ----
   { id: "name_1", type: "speak", domain: "Naming", max: 1, scoredBy: "ai_speech",
-    text: "What is this?", say: "What is this?", image: "images/naming1.png", emoji: "🦉",
-    maxSeconds: 10, allowReplay: true, key: "owl" },
+    text: "What is this called?", say: "What is this called?", emoji: "⏳",
+    maxSeconds: 12, allowReplay: true, key: "hourglass (also accept: sand timer, egg timer)" },
   { id: "name_2", type: "speak", domain: "Naming", max: 1, scoredBy: "ai_speech",
-    text: "What is this?", say: "What is this?", image: "images/naming2.png", emoji: "🌵",
-    maxSeconds: 10, allowReplay: true, key: "cactus" },
+    text: "What is this called?", say: "What is this called?", emoji: "🪗",
+    maxSeconds: 12, allowReplay: true, key: "accordion (also accept: concertina, squeezebox)" },
   { id: "name_3", type: "speak", domain: "Naming", max: 1, scoredBy: "ai_speech",
-    text: "What is this?", say: "What is this?", image: "images/naming3.png", emoji: "🦘",
-    maxSeconds: 10, allowReplay: true, key: "kangaroo" },
+    text: "What is this called?", say: "What is this called?", emoji: "🦚",
+    maxSeconds: 12, allowReplay: true, key: "peacock (also accept: peafowl, peahen)" },
 
-  // ---- Attention (6) ----
-  { id: "digits_5", type: "speak", domain: "Attention", max: 1, scoredBy: "ai_speech",
-    text: "Listen to the numbers.\nThen say them back in the same order.",
-    say: "I will say some numbers. When I finish, say them back in the same order.",
-    sequence: ["4", "9", "3", "7", "1"], sequenceGapMs: 1000, maxSeconds: 15, allowReplay: false, key: "4 9 3 7 1" },
+  // ---- Attention (6): longer forward digit spans, visual letter tap, serial 7s from 80 ----
   { id: "digits_6", type: "speak", domain: "Attention", max: 1, scoredBy: "ai_speech",
     text: "Listen to the numbers.\nThen say them back in the same order.",
-    say: "Here are some more numbers. When I finish, say them back in the same order.",
-    sequence: ["8", "2", "6", "4", "9", "3"], sequenceGapMs: 1000, maxSeconds: 15, allowReplay: false, key: "8 2 6 4 9 3" },
+    say: "I will say some numbers. When I finish, say them back in the same order.",
+    sequence: ["7", "2", "8", "5", "1", "6"], sequenceGapMs: 1000, maxSeconds: 15, allowReplay: false, key: "7 2 8 5 1 6" },
+  { id: "digits_7", type: "speak", domain: "Attention", max: 1, scoredBy: "ai_speech",
+    text: "Listen to the numbers.\nThen say them back in the same order.",
+    say: "Now a longer list. When I finish, say the numbers back in the same order.",
+    sequence: ["3", "9", "4", "1", "8", "6", "2"], sequenceGapMs: 1000, maxSeconds: 18, allowReplay: false, key: "3 9 4 1 8 6 2" },
   { id: "letters", type: "vigilance", domain: "Attention", max: 1, scoredBy: "app_logic",
     text: "Tap the big button every time you SEE the letter M.",
-    say: "Letters will appear on the screen, one at a time. Tap the big button every time you see the letter M. Do not tap for any other letter. Get ready.",
-    letters: LETTERS, target: "M", showMs: 2000, gapMs: 300 },  // each letter shown 2 s, then 0.3 s blank
-  { id: "serial3", type: "speak", domain: "Attention", max: 3, scoredBy: "ai_speech",
-    text: "Start at 50. Take away 3, and keep taking away 3.\nSay five answers out loud.",
-    say: "Start at fifty. Take away three. Keep taking away three from each answer. Say five answers out loud.",
-    maxSeconds: 45, allowReplay: true, key: "47, 44, 41, 38, 35" },
+    say: "Letters will appear on the screen, one at a time. Tap the big button every time you see the letter M. Do not tap for any other letter, even if it looks like M. Get ready.",
+    letters: LETTERS, target: "M", lures: ["N", "W"], showMs: 2000, gapMs: 300 },  // each letter shown 2 s, then 0.3 s blank
+  { id: "serial7", type: "speak", domain: "Attention", max: 3, scoredBy: "ai_speech",
+    text: "Start at 80. Take away 7, and keep taking away 7.\nSay five answers out loud.",
+    say: "Start at eighty. Take away seven. Keep taking away seven from each answer. Say five answers out loud.",
+    maxSeconds: 60, allowReplay: true, key: "73, 66, 59, 52, 45" },
 
-  // ---- Language (3) ----
+  // ---- Language (3): two longer sentences with a clause, letter fluency ----
   { id: "sentence_1", type: "speak", domain: "Language", max: 1, scoredBy: "ai_speech",
     text: "Repeat the sentence exactly.",
     say: "I will say a sentence. Repeat it exactly the way I say it.",
-    sequence: ["The tall man carried a red umbrella to the market on Tuesday."], sequenceGapMs: 300,
-    maxSeconds: 15, allowReplay: false, key: "The tall man carried a red umbrella to the market on Tuesday." },
+    sequence: ["The woman who lives next to the bakery walks her two dogs every evening."], sequenceGapMs: 300,
+    maxSeconds: 18, allowReplay: false, key: "The woman who lives next to the bakery walks her two dogs every evening." },
   { id: "sentence_2", type: "speak", domain: "Language", max: 1, scoredBy: "ai_speech",
     text: "Repeat the sentence exactly.",
     say: "Here is another sentence. Repeat it exactly the way I say it.",
-    sequence: ["Grandma baked three loaves of bread before the snowstorm arrived."], sequenceGapMs: 300,
-    maxSeconds: 15, allowReplay: false, key: "Grandma baked three loaves of bread before the snowstorm arrived." },
+    sequence: ["Before the storm arrived, the farmer locked the barn and counted all of his sheep."], sequenceGapMs: 300,
+    maxSeconds: 18, allowReplay: false, key: "Before the storm arrived, the farmer locked the barn and counted all of his sheep." },
   { id: "fluency", type: "speak", domain: "Language", max: 1, scoredBy: "ai_speech",
-    text: "Name as many FRUITS as you can.\nYou have 1 minute.",
-    say: "Name as many different fruits as you can. You have one minute. Start when you see the timer.",
-    maxSeconds: 60, countdown: true, allowReplay: false, key: "10 or more different fruits = 1 point" },
+    text: "Say as many words as you can that start with the letter P.\nNo names of people or places. You have 1 minute.",
+    say: "Say as many words as you can that start with the letter P, as in Peter. Do not use names of people or places. You have one minute. Start when you see the timer.",
+    maxSeconds: 60, countdown: true, allowReplay: false, key: "11 or more valid words starting with P = 1 point" },
 
   // ---- Abstraction (2) ----
   { id: "abstract_1", type: "speak", domain: "Abstraction", max: 1, scoredBy: "ai_speech",
-    text: "How are a PIANO and a DRUM alike?", say: "How are a piano and a drum alike?",
-    maxSeconds: 20, allowReplay: true, key: "musical instruments" },
+    text: "How are a NEWSPAPER and a RADIO alike?", say: "How are a newspaper and a radio alike?",
+    maxSeconds: 20, allowReplay: true, key: "both give news / information; both are ways of communicating (media)" },
   { id: "abstract_2", type: "speak", domain: "Abstraction", max: 1, scoredBy: "ai_speech",
-    text: "How are a RULER and a THERMOMETER alike?", say: "How are a ruler and a thermometer alike?",
-    maxSeconds: 20, allowReplay: true, key: "measuring tools / instruments" },
+    text: "How are a POEM and a PAINTING alike?", say: "How are a poem and a painting alike?",
+    maxSeconds: 20, allowReplay: true, key: "both are art / works of art / creative expression" },
 
-  // ---- Delayed memory (5) ----
+  // ---- Delayed memory (5) + recognition (0 points, research variable) ----
   { id: "recall", type: "speak", domain: "Delayed memory", max: 5, scoredBy: "ai_speech",
     text: "Earlier you heard 5 words.\nSay all the words you remember.",
     say: "Earlier, I said five words. Please say all the words you remember.",
     maxSeconds: 30, allowReplay: false, key: WORDS.join(", ") },
+  { id: "recognize", type: "recognize", domain: "Delayed memory", max: 0, scoredBy: "app_logic",
+    words: RECOGNITION, targets: WORDS,
+    text: "Tap every word that was in the list of 5 words.\nThen tap Done.",
+    say: "Here are some words. Tap every word that was in the list of five words from earlier. Then tap Done." },
 
   { id: "end", type: "end", max: 0, scoredBy: "none",
     text: "All done — thank you!\nPlease hand the tablet back.",

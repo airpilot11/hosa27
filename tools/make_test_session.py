@@ -1,7 +1,7 @@
 """Create a FAKE participant session (code T99, marked demo) to test the Mac scoring pipeline.
 
-Spoken answers are generated with the Mac's built-in `say` voice. The clock "drawing" is the app icon
-(placeholder). Output goes to data/raw/ (marked demo, so scripts only use it with --demo / it is ignored
+Spoken answers are generated with the Mac's built-in `say` voice. The box "drawing" is the app icon
+(placeholder, so the AI should score it 0). Timing values are made up but realistic. Output goes to data/raw/ (marked demo, so scripts only use it with --demo / it is ignored
 by real-data runs).
 
 Run:  python3 tools/make_test_session.py
@@ -27,12 +27,13 @@ now = datetime.now()
 answers = {  # what the fake participant "says"
     "orient_day": now.strftime("%A"), "orient_date": f"It is the {now.day}th", "orient_month": now.strftime("%B"),
     "orient_year": "twenty twenty five, no wait, twenty twenty six", "orient_place": "the test center", "orient_city": "Atlanta",
-    "name_1": "an owl", "name_2": "a cactus", "name_3": "um, a deer?",
-    "digits_5": "4 9 3 7 1", "digits_6": "8 2 6 9 4 3", "serial3": "47, 44, 40, 37, 34",
-    "sentence_1": "The tall man carried a red umbrella to the market on Tuesday.",
-    "sentence_2": "Grandma baked bread before the snowstorm arrived.",
-    "fluency": "apple, banana, orange, grape, mango, apple, pear, peach, carrot, plum, kiwi",
-    "abstract_1": "they are both musical instruments", "abstract_2": "they both have numbers on them",
+    "learn_1": "river, candle, and garden", "learn_2": "river, candle, jacket, garden",
+    "name_1": "an hourglass", "name_2": "an accordion", "name_3": "um, a fancy bird?",
+    "digits_6": "7 2 8 5 1 6", "digits_7": "3 9 4 8 1 6 2", "serial7": "73, 66, 58, 51, 44",
+    "sentence_1": "The woman who lives next to the bakery walks her two dogs every evening.",
+    "sentence_2": "Before the storm, the farmer locked the barn and counted his sheep.",
+    "fluency": "pen, pencil, paper, Paris, purple, pink, pickle, plant, planted, phone, pie, pear, pillow, pot",
+    "abstract_1": "they both give you the news", "abstract_2": "they both have colors",
     "recall": "river, jacket, candle, and I think piano",
 }
 
@@ -48,14 +49,23 @@ items = {}
 for st in steps:
     it = {"id": st["id"], "type": st["type"], "domain": st.get("domain"), "max": st.get("max", 0),
           "scoredBy": st.get("scoredBy", "none"), "prompt": st.get("text", ""), "key": st.get("key")}
+    it["totalMs"] = 9000
     if st["id"] in answers:
-        it.update(audio=say_to_m4a(answers[st["id"]]), audioMime="audio/mp4", recordMs=4000)
-    elif st["id"] == "clock":
+        it.update(audio=say_to_m4a(answers[st["id"]]), audioMime="audio/mp4", recordMs=4000,
+                  latencyMs=1400 + 90 * len(items), speechEndMs=3800, responseMs=4000, instructionMs=3500)
+    elif st["type"] == "draw":
         it["image"] = "data:image/png;base64," + base64.b64encode((ROOT / "app/icons/icon-512.png").read_bytes()).decode()
+        it.update(strokes=9, firstStrokeMs=6200, latencyMs=900, drawMs=38000, durationMs=44200)
     elif st["id"] == "trail":
-        it.update(completed=True, errors=1, durationMs=41000, appScore=1)
+        it.update(completed=True, errors=1, durationMs=58000, firstTapMs=2100, appScore=1)
+    elif st["id"] in ("rotate_1", "rotate_2"):
+        ok = st["id"] == "rotate_1"
+        it.update(choice=1 if ok else 0, correct=ok, rtMs=7400 if ok else 12900, appScore=1 if ok else 0, stopReason="tapped")
     elif st["id"] == "letters":
-        it.update(hits=10, misses=0, falseAlarms=1, appScore=1)
+        it.update(hits=8, misses=0, falseAlarms=1, lureTaps=1, meanHitRtMs=640, appScore=1)
+    elif st["id"] == "recognize":
+        it.update(chosen=["river", "candle", "jacket", "garden", "guitar"], hits=4, falseAlarms=1, misses=1,
+                  recognitionScore=3, responseMs=14500)
     items[st["id"]] = it
 
 session = {
@@ -63,7 +73,8 @@ session = {
     "order": "app_first", "place": "Test Center", "city": "Alpharetta", "observer": "XX",
     "startedAt": now.isoformat(), "localDate": now.strftime("%Y-%m-%d"), "weekday": now.strftime("%A"),
     "month": now.strftime("%B"), "dayOfMonth": now.day, "year": now.year,
-    "steps": [{k: st.get(k) for k in ("id", "type", "domain", "max", "scoredBy", "key")} | {"prompt": st.get("text", "")} for st in steps],
+    "steps": [{k: st.get(k) for k in ("id", "type", "domain", "max", "scoredBy", "key")}
+              | {"prompt": st.get("text", ""), "countOnly": bool(st.get("countOnly"))} for st in steps],
     "items": items, "helpEvents": [], "completed": True,
 }
 out = ROOT / "data" / "raw" / "hosa27_T99_TEST.json"

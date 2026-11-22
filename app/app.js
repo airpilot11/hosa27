@@ -361,10 +361,11 @@
   // ---------------------------------------------------------------- item record helpers
   function itemBase(step) {
     return { id: step.id, type: step.type, domain: step.domain || null, max: step.max || 0, scoredBy: step.scoredBy || "none",
-      prompt: step.text || "", key: step.key || null, startedAt: new Date().toISOString(), replays: 0 };
+      prompt: step.text || "", key: step.key || null, startedAt: new Date().toISOString(), replays: 0, _t0: now() };
   }
   // Saving never silently overwrites: a redo keeps every earlier attempt in item.attempts (audit trail).
   async function storeItem(item) {
+    if (item._t0 !== undefined) { item.totalMs = Math.round(now() - item._t0); delete item._t0; } // screen shown -> saved
     const prev = session.items[item.id];
     if (prev) { const { attempts, ...old } = prev; item.attempts = [...(attempts || []), old]; }
     item.attempt = (item.attempts ? item.attempts.length : 0) + 1;
@@ -377,7 +378,7 @@
   }
   function flagNext(stepId, flag) { (pendingFlags[stepId] = pendingFlags[stepId] || []).push(flag); }
   // items where repeating gives extra exposure to material that must be remembered
-  const isMemorySensitive = (step) => !!step && (!step.allowReplay && step.type === "speak" || step.id === "recall" || step.id.startsWith("learn"));
+  const isMemorySensitive = (step) => !!step && (!step.allowReplay && step.type === "speak" || step.id === "recall" || step.id === "recognize" || step.id.startsWith("learn"));
   function lockPause(on) { const b = $("pauseBtn"); if (b) { b.disabled = on; b.style.opacity = on ? 0.35 : 1; } }
 
   // =====================================================================
@@ -594,7 +595,7 @@
         voice: hasPack() ? { pack: AUDIO_PACK_INFO } : { builtIn: voice ? voice.name : null },
         micCheck: needMic ? (micResult || { passed: false, skipped: micSkipped }) : { notNeeded: true },
         retest: dupes.length > 0,
-        steps: STEPS.map((s) => ({ id: s.id, type: s.type, domain: s.domain || null, max: s.max || 0, scoredBy: s.scoredBy || "none", key: s.key || null, prompt: s.text || "" })),
+        steps: STEPS.map((s) => ({ id: s.id, type: s.type, domain: s.domain || null, max: s.max || 0, scoredBy: s.scoredBy || "none", key: s.key || null, prompt: s.text || "", countOnly: !!s.countOnly })),
         items: {}, helpEvents: [], pauses: [], corrections: [], completed: false,
       };
       if (orderOverride) logCorrection("order_override", null, `expected ${expected}`);
@@ -831,6 +832,10 @@
     if (it.errors !== undefined) b.push(`errors ${it.errors}`);
     if (it.hits !== undefined) b.push(`hits ${it.hits}, misses ${it.misses}, false taps ${it.falseAlarms}`);
     if (it.durationMs) b.push(`${(it.durationMs / 1000).toFixed(1)} s`);
+    if (it.latencyMs != null) b.push(`started answering after ${(it.latencyMs / 1000).toFixed(1)} s`);
+    if (it.rtMs != null) b.push(`${it.correct ? "correct" : "wrong"} in ${(it.rtMs / 1000).toFixed(1)} s`);
+    if (it.meanHitRtMs != null) b.push(`mean reaction ${it.meanHitRtMs} ms`);
+    if (it.recognitionScore != null) b.push(`recognition ${it.recognitionScore}`);
     if (it.replays) b.push(`replayed ${it.replays}×`);
     if (it.voiceDetected === false) b.push("no speech detected");
     if (it.error) b.push(`⚠️ ${it.error}`);
@@ -847,7 +852,7 @@
       const it = (s.items || {})[st.id];
       if (st.type === "intro" || st.type === "end") return "";
       const media = !it ? "" : it.audio ? `<audio controls preload="none" src="${it.audio}" style="width:100%;max-width:320px"></audio>`
-        : it.image ? `<img src="${it.image}" alt="clock drawing" style="width:180px;border:1px solid var(--line);border-radius:10px">` : "";
+        : it.image ? `<img src="${it.image}" alt="drawing" style="width:180px;border:1px solid var(--line);border-radius:10px">` : "";
       return `<tr><td><b>${esc(st.id)}</b><br><span style="color:var(--muted)">${esc(st.domain || "")}${st.max ? ` · ${st.max} pt` : ""}</span></td>
         <td>${it ? esc(itemSummary(it)) || "saved" : `<span class="status-pill warn">not done</span>`}
         ${helpBy[st.id] ? `<br>🙋 staff helped ×${helpBy[st.id]}` : ""}${pauseBy[st.id] ? `<br>⏸ paused ×${pauseBy[st.id]}` : ""}
@@ -867,7 +872,7 @@
           <div>Observer</div><div>${esc(s.observer || "—")}</div>
           <div>Staff help / pauses</div><div>${(s.helpEvents || []).length} / ${(s.pauses || []).length}</div>
           <div>Paper SLUMS</div><div>${slumsText(s)}${s.breakMinutes != null ? ` · break ${s.breakMinutes} min` : ""}</div>
-          <div>Automatic scores</div><div>${auto.map((i) => `${esc(i.id)} ${i.appScore}/${i.max}`).join(", ") || "—"} <span style="color:var(--muted)">(spoken items + clock are scored later on the Mac)</span></div>
+          <div>Automatic scores</div><div>${auto.map((i) => `${esc(i.id)} ${i.appScore}/${i.max}`).join(", ") || "—"} <span style="color:var(--muted)">(spoken items + box drawing are scored later on the Mac)</span></div>
           <div>Mic check</div><div>${s.micCheck ? (s.micCheck.notNeeded ? "not needed" : s.micCheck.passed ? "passed ✓" : s.micCheck.skipped ? "skipped ⚠️" : "failed ⚠️") : "—"}</div>
           <div>Exported</div><div>${s.exportedAt ? esc(new Date(s.exportedAt).toLocaleString()) : "not yet"}</div>
           <div>App version</div><div>${esc(s.version)}${s.largeText ? " · larger text" : ""}${s.retest ? " · re-test of an existing code" : ""}</div>
@@ -888,8 +893,10 @@
       "slums_status", "slums_position", "slums_minutes", "break_minutes", "corrections_total", "mic_check",
       "step_id", "domain", "max_points", "saved", "auto_score", "recording_seconds", "has_audio", "has_drawing",
       "duration_seconds", "errors", "hits", "misses", "false_taps", "replays", "stop_reason", "staff_help_on_step",
-      "attempt", "skipped", "voice_detected", "flags"];
+      "attempt", "skipped", "voice_detected", "flags",
+      "latency_seconds", "speech_end_seconds", "response_seconds", "total_seconds", "rt_seconds", "correct", "mean_hit_rt_ms", "recognition_score"];
     const q = (v) => { const t = v === undefined || v === null ? "" : String(v); return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+    const sec = (ms) => (ms === undefined || ms === null ? "" : (ms / 1000).toFixed(2));
     const lines = [cols.join(",")];
     for (const s of list) {
       for (const st of s.steps || []) {
@@ -903,7 +910,9 @@
           it.recordMs !== undefined ? (it.recordMs / 1000).toFixed(1) : "", it.audio ? "yes" : "no", it.image ? "yes" : "no",
           it.durationMs ? (it.durationMs / 1000).toFixed(1) : "", it.errors ?? "", it.hits ?? "", it.misses ?? "",
           it.falseAlarms ?? "", it.replays ?? "", it.stopReason ?? "", help,
-          it.attempt ?? "", it.skipped ? "yes" : "", it.voiceDetected === undefined ? "" : it.voiceDetected ? "yes" : "no", (it.flags || []).join("; ")].map(q).join(","));
+          it.attempt ?? "", it.skipped ? "yes" : "", it.voiceDetected === undefined ? "" : it.voiceDetected ? "yes" : "no", (it.flags || []).join("; "),
+          sec(it.latencyMs), sec(it.speechEndMs), sec(it.responseMs ?? it.drawMs), sec(it.totalMs), sec(it.rtMs),
+          it.correct === undefined ? "" : it.correct ? "yes" : "no", it.meanHitRtMs ?? "", it.recognitionScore ?? ""].map(q).join(","));
       }
     }
     const file = new File([lines.join("\n")], `hosa27_summary_${localDateInfo().localDate}.csv`, { type: "text/csv" });
@@ -1046,6 +1055,8 @@
       if (st.type === "speak" && it.stopReason === "done_button" && it.recordMs < 1800) out.push({ st, why: `very short answer (${(it.recordMs / 1000).toFixed(1)} s) — “I'm done” may have been tapped too early` });
       if (st.type === "trail" && !it.completed) out.push({ st, why: "connect-the-dots not finished in time" });
       if (st.type === "draw" && (it.strokes || 0) < 3) out.push({ st, why: "very little drawing" });
+      if (st.type === "rotate" && it.stopReason === "time_limit") out.push({ st, why: "no answer tapped in time" });
+      if (st.type === "recognize" && !(it.chosen || []).length) out.push({ st, why: "no words tapped" });
     }
     return out;
   }
@@ -1178,7 +1189,7 @@
     if (!step) return finishSession();
     renderToolbar();
     prefetchStep(STEPS[stepIndex + 1]);
-    const runners = { intro: introStep, speak: speakStep, trail: trailStep, draw: drawStep, vigilance: vigilanceStep, end: endStep };
+    const runners = { intro: introStep, speak: speakStep, trail: trailStep, draw: drawStep, rotate: rotateStep, vigilance: vigilanceStep, recognize: recognizeStep, end: endStep };
     (runners[step.type] || next)(step);
     window.scrollTo(0, 0);
   }
@@ -1213,7 +1224,7 @@
     const C = 2 * Math.PI * 52;
     const visual = step.image
       ? `<img class="naming-img" src="${esc(step.image)}" alt="" onerror="this.outerHTML='<div class=&quot;naming-emoji&quot;>${step.emoji || "?"}</div>'">`
-      : "";
+      : step.emoji ? `<div class="naming-emoji" aria-hidden="true">${step.emoji}</div>` : "";
     $app.innerHTML = shell(`
       ${chip(step)}
       ${visual}
@@ -1256,6 +1267,9 @@
     $status.className = "status speak"; $status.textContent = step.countdown ? "Go! Start naming now" : "Your turn — please answer";
     $meter.classList.remove("hidden");
     item.recordStartedAt = new Date().toISOString();
+    const respOpen = now(); item.instructionMs = Math.round(respOpen - item._t0);
+    // speech timing: onset = first sound lasting >= 150 ms after "Your turn"; end = last sound heard
+    let voiceStart = null, onsetAt = null, lastVoiceAt = null;
 
     // live sound meter + gentle "take your time" prompt
     const bars = [...$meter.children]; let lastVoice = now(); let heard = false; let maxLevel = 0;
@@ -1263,8 +1277,15 @@
       if (cancelled || finished) return;
       const lv = recorder.level(); maxLevel = Math.max(maxLevel, lv);
       bars.forEach((b, i) => { const wobble = 0.55 + 0.45 * Math.sin(now() / 120 + i * 1.3); b.style.height = `${10 + Math.round(lv * 46 * wobble)}px`; });
-      if (lv > 0.12) { lastVoice = now(); if (!heard) { heard = true; $hint.textContent = "We can hear you ✓"; } }
-      else if (!step.countdown && now() - lastVoice > 7000) { $hint.textContent = "Take your time — answer whenever you're ready."; }
+      if (lv > 0.12) {
+        lastVoice = now(); lastVoiceAt = lastVoice;
+        if (voiceStart === null) voiceStart = lastVoice;
+        if (onsetAt === null && lastVoice - voiceStart >= 150) onsetAt = voiceStart;
+        if (!heard) { heard = true; $hint.textContent = "We can hear you ✓"; }
+      } else {
+        voiceStart = null;
+        if (!step.countdown && now() - lastVoice > 7000) $hint.textContent = "Take your time — answer whenever you're ready.";
+      }
       raf = requestAnimationFrame(tick);
     };
     let finished = false;
@@ -1273,6 +1294,9 @@
     const finish = async (reason) => {
       if (finished || cancelled) return; finished = true; clearInterval(timer); cancelAnimationFrame(raf);
       $meter.classList.add("hidden"); $status.className = "status"; $status.textContent = "Saving…";
+      item.responseMs = Math.round(now() - respOpen);
+      item.latencyMs = onsetAt !== null ? Math.round(onsetAt - respOpen) : null;
+      item.speechEndMs = lastVoiceAt !== null && onsetAt !== null ? Math.round(lastVoiceAt - respOpen) : null;
       const out = await recorder.stop();
       item.stopReason = reason; item.recordMs = out.ms; item.audioMime = out.mime;
       if (!noMic()) {
@@ -1315,6 +1339,7 @@
     const finish = async (reason) => {
       if (finished) return; finished = true; clearTimeout(timer);
       item.durationMs = t0 ? Math.round(now() - t0) : null; item.stopReason = reason;
+      item.firstTapMs = item.taps.length ? item.taps[0].t : null;
       item.completed = nextIdx === step.circles.length;
       item.appScore = step.practice ? null : (item.completed ? 1 : 0) + (item.completed && item.errors === 0 ? 1 : 0);
       await storeItem(item); await sleep(500);
@@ -1339,21 +1364,25 @@
     });
   }
 
-  // --- clock drawing
+  // --- drawing (copy a figure)
   function drawStep(step) {
     const item = itemBase(step); item.clears = 0; item.strokes = 0;
     // landscape: buttons beside the drawing area (bigger canvas); portrait: buttons below
     const land = window.innerWidth > window.innerHeight * 1.1;
     const extra = R.on ? 52 : 0;
-    const size = Math.round(Math.max(280, land
-      ? Math.min(window.innerHeight - 370 - extra, window.innerWidth * 0.5, 680)
-      : Math.min(window.innerWidth - 120, window.innerHeight - 540 - extra, 700)));
+    const fig = step.figure && FIGURES[step.figure];
+    const size = Math.round(Math.max(260, land
+      ? Math.min(window.innerHeight - 370 - extra, window.innerWidth * 0.5 - (fig ? 120 : 0), 680)
+      : Math.min(window.innerWidth - 120 - (fig ? 250 : 0), window.innerHeight - 560 - extra, 700)));
     $app.innerHTML = shell(`
       ${chip(step)}
       <h2 class="prompt" style="font-size:calc(clamp(24px,3.2vw,34px) * var(--fs))">${esc(step.text)}</h2>
       <div class="caption" id="cap" aria-live="polite"></div>
       <div class="draw-layout ${land ? "land" : ""}">
-        <canvas class="draw" id="cv" width="${size * 2}" height="${size * 2}" style="width:${size}px;height:${size}px"></canvas>
+        <div class="draw-pair">
+          ${fig ? `<div class="copy-figure" aria-hidden="true">${fig}</div>` : ""}
+          <canvas class="draw" id="cv" width="${size * 2}" height="${size * 2}" style="width:${size}px;height:${size}px"></canvas>
+        </div>
         <div class="draw-btns">
           <button class="btn-primary" id="done" disabled>${ICON.check} Done</button>
           <button class="btn-secondary" id="clear">${ICON.erase} Start over</button>
@@ -1364,18 +1393,105 @@
     const cv = $("cv"), ctx = cv.getContext("2d");
     const blank = () => { ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height); };
     blank(); ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.lineWidth = 7; ctx.strokeStyle = "#111";
-    let drawing = false; const t0 = now();
+    let drawing = false; const t0 = now(); let instrEnd = null, firstStroke = null;
     const pt = (e) => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * (cv.width / r.width), (e.clientY - r.top) * (cv.height / r.height)]; };
-    cv.addEventListener("pointerdown", (e) => { drawing = true; cv.setPointerCapture(e.pointerId); const [x, y] = pt(e); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 0.1, y + 0.1); ctx.stroke(); item.strokes += 1; $("done").disabled = false; });
+    cv.addEventListener("pointerdown", (e) => { if (firstStroke === null) firstStroke = now(); drawing = true; cv.setPointerCapture(e.pointerId); const [x, y] = pt(e); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 0.1, y + 0.1); ctx.stroke(); item.strokes += 1; $("done").disabled = false; });
     cv.addEventListener("pointermove", (e) => { if (!drawing) return; const [x, y] = pt(e); ctx.lineTo(x, y); ctx.stroke(); });
     ["pointerup", "pointercancel"].forEach((ev) => cv.addEventListener(ev, () => (drawing = false)));
     $("clear").onclick = () => { blank(); item.clears += 1; item.strokes = 0; $("done").disabled = true; };
     const rp = $("replay"); if (rp) rp.onclick = () => { item.replays += 1; stopSpeech(); playInstruction(step); };
     $("done").onclick = async () => {
       stopSpeech(); item.durationMs = Math.round(now() - t0); item.image = cv.toDataURL("image/png");
+      item.firstStrokeMs = firstStroke !== null ? Math.round(firstStroke - t0) : null;
+      item.latencyMs = firstStroke !== null && instrEnd !== null ? Math.max(0, Math.round(firstStroke - instrEnd)) : null;
+      item.drawMs = firstStroke !== null ? Math.round(now() - firstStroke) : null;
       await storeItem(item); await thanks(); if (STEPS[stepIndex] === step) next();
     };
-    playInstruction(step);
+    playInstruction(step).then(() => { if (instrEnd === null) instrEnd = now(); });
+  }
+
+  // figures to copy (draw steps with `figure`)
+  const FIGURES = {
+    box: `<svg viewBox="0 0 120 100" class="fig-svg"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+      <rect x="10" y="36" width="64" height="58"/><rect x="42" y="8" width="64" height="58"/>
+      <path d="M10 36 L42 8 M74 36 L106 8 M10 94 L42 66 M74 94 L106 66"/></g></svg>`,
+  };
+
+  // --- shape turning (mental rotation): tap the choice that is the same shape, just turned
+  function shapeSVG(cells, rot = 0, mirror = false) {
+    const xs = cells.map((c) => c[0]), ys = cells.map((c) => c[1]);
+    const cx = (Math.min(...xs) + Math.max(...xs) + 1) / 2, cy = (Math.min(...ys) + Math.max(...ys) + 1) / 2;
+    const rects = cells.map(([x, y]) => `<rect x="${x}" y="${y}" width="1.02" height="1.02"/>`).join("");
+    return `<svg viewBox="${cx - 2} ${cy - 2} 4 4" class="shape-svg" aria-hidden="true"><g transform="rotate(${rot} ${cx} ${cy}) translate(${cx} ${cy}) scale(${mirror ? -1 : 1} 1) translate(${-cx} ${-cy})">${rects}</g></svg>`;
+  }
+  function rotateStep(step) {
+    const item = itemBase(step);
+    const cells = SHAPES[step.shape]; const correctIdx = step.choices.findIndex((c) => !c.mirror);
+    $app.innerHTML = shell(`
+      ${chip(step)}
+      <h2 class="prompt">${esc(step.text)}</h2>
+      <div class="caption" id="cap" aria-live="polite"></div>
+      <div class="rot-target">${shapeSVG(cells)}</div>
+      <div class="rot-choices">${step.choices.map((c, i) =>
+        `<button class="rot-choice" data-i="${i}" disabled aria-label="choice ${i + 1}">${shapeSVG(cells, c.rot, c.mirror)}</button>`).join("")}</div>
+      <div class="status" id="status">Please listen…</div>`);
+    wirePause();
+    const btns = [...document.querySelectorAll(".rot-choice")], $status = $("status");
+    let t0 = null, finished = false, cancelled = false, timer = null;
+    abortStep = () => { cancelled = true; finished = true; clearTimeout(timer); stopSpeech(); };
+    const finish = async (i, reason) => {
+      if (finished) return; finished = true; clearTimeout(timer);
+      btns.forEach((b) => (b.disabled = true));
+      item.choice = i; item.correct = i === correctIdx; item.stopReason = reason;
+      item.rtMs = i === null ? null : Math.round(now() - t0);
+      item.appScore = step.practice ? null : (item.correct ? 1 : 0);
+      if (step.practice) { // show the right answer so everyone understands the task before it counts
+        btns[correctIdx].classList.add("right");
+        if (i !== null && !item.correct) btns[i].classList.add("wrong");
+        $status.textContent = item.correct ? "Yes! That is the same shape, just turned." : "This one (green) is the same shape, just turned. The others are flipped.";
+        await sleep(R.on && R.short ? 600 : 4500); if (cancelled) return;
+      }
+      await storeItem(item); await thanks(); if (STEPS[stepIndex] === step) next();
+    };
+    btns.forEach((b) => b.addEventListener("click", () => { if (t0 !== null) finish(Number(b.dataset.i), "tapped"); }));
+    playInstruction(step).then(() => {
+      if (finished) return;
+      btns.forEach((b) => (b.disabled = false)); t0 = now(); item.instructionMs = Math.round(t0 - item._t0);
+      $status.textContent = "Tap your answer";
+      timer = setTimeout(() => finish(null, "time_limit"), (R.on && R.short ? 8 : (step.timeLimitSec || 60)) * 1000);
+    });
+  }
+
+  // --- word recognition: tap the words that were in the list
+  function recognizeStep(step) {
+    const item = itemBase(step); item.selections = [];
+    $app.innerHTML = shell(`
+      ${chip(step)}
+      <h2 class="prompt">${esc(step.text)}</h2>
+      <div class="caption" id="cap" aria-live="polite"></div>
+      <div class="word-grid">${step.words.map((w, i) => `<button class="word-btn" data-i="${i}" aria-pressed="false" disabled>${esc(w)}</button>`).join("")}</div>
+      <button class="btn-primary" id="done" disabled>${ICON.check} Done</button>`);
+    wirePause();
+    const btns = [...document.querySelectorAll(".word-btn")];
+    let t0 = null, finished = false; abortStep = () => { finished = true; stopSpeech(); };
+    btns.forEach((b) => b.addEventListener("click", () => {
+      if (t0 === null || finished) return;
+      const on = !b.classList.contains("on"); b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on));
+      item.selections.push({ word: step.words[Number(b.dataset.i)], on, t: Math.round(now() - t0) });
+    }));
+    $("done").onclick = async () => {
+      if (t0 === null || finished) return; finished = true;
+      const chosen = btns.filter((b) => b.classList.contains("on")).map((b) => step.words[Number(b.dataset.i)]);
+      item.chosen = chosen; item.hits = chosen.filter((w) => step.targets.includes(w)).length;
+      item.falseAlarms = chosen.length - item.hits; item.misses = step.targets.length - item.hits;
+      item.recognitionScore = item.hits - item.falseAlarms; // -5..5
+      item.responseMs = Math.round(now() - t0); item.appScore = null;
+      await storeItem(item); await thanks(); if (STEPS[stepIndex] === step) next();
+    };
+    playInstruction(step).then(() => {
+      if (finished) return;
+      btns.forEach((b) => (b.disabled = false)); $("done").disabled = false; t0 = now(); item.instructionMs = Math.round(t0 - item._t0);
+    });
   }
 
   // --- letter tap (vigilance): letters are SHOWN one at a time (not spoken); tap for the target letter
@@ -1419,13 +1535,20 @@
       await waitUntil(t0 + step.letters.length * interval + 400); if (cancelled) return;
       $tap.disabled = true;
       // score: a tap from when an M appears until the next letter appears = hit; any other tap = false alarm
-      const windowMs = interval; const used = new Set(); let hits = 0, misses = 0;
+      const windowMs = interval; const used = new Set(); let hits = 0, misses = 0; const rts = [];
       item.onsets.forEach((o) => {
         if (o.letter !== step.target) return;
         const start = o.onset ?? o.scheduled;
         const idx = item.taps.findIndex((t, k) => !used.has(k) && t >= start && t <= start + windowMs);
-        if (idx >= 0) { used.add(idx); hits += 1; } else misses += 1;
+        if (idx >= 0) { used.add(idx); hits += 1; rts.push(item.taps[idx] - start); } else misses += 1;
       });
+      // taps that were not hits: was a look-alike letter (e.g. N, W) on screen?
+      item.lureTaps = item.taps.filter((t, k) => {
+        if (used.has(k)) return false;
+        const o = [...item.onsets].reverse().find((x) => (x.onset ?? x.scheduled) <= t);
+        return !!o && step.lures && step.lures.includes(o.letter);
+      }).length;
+      item.hitRtsMs = rts; item.meanHitRtMs = rts.length ? Math.round(rts.reduce((a, b) => a + b, 0) / rts.length) : null;
       item.hits = hits; item.misses = misses; item.falseAlarms = item.taps.length - used.size;
       item.errors = item.misses + item.falseAlarms;
       item.appScore = item.errors <= 1 ? 1 : 0;

@@ -5,6 +5,7 @@ background answers) into:
 
   data/scores/final_dataset.csv   one row per participant (totals + SLUMS + SUS)  -> correlation, ROC
   data/scores/item_level.csv      one row per participant x item (AI vs human)   -> kappa / ICC / agreement
+  (per-item timing is in data/scores/item_timing.csv, written by extract.py)
 
 Run:  .venv/bin/python scoring/merge.py
 """
@@ -55,11 +56,11 @@ def zscores(values: dict) -> dict:
     return {k: (v - m) / sd for k, v in vals.items()}
 
 
-def speed_fluency(fruit: dict, recall: dict, trail_sec: dict) -> dict:
-    """Composite that keeps varying when point totals hit the ceiling: mean of z(fruits), z(words recalled), -z(trail time)."""
-    zf, zr, zt = zscores(fruit), zscores(recall), zscores(trail_sec)
+def speed_fluency(fluency: dict, recall: dict, trail_sec: dict) -> dict:
+    """Composite that keeps varying when point totals hit the ceiling: mean of z(P words), z(words recalled), -z(trail time)."""
+    zf, zr, zt = zscores(fluency), zscores(recall), zscores(trail_sec)
     out = {}
-    for code in set(fruit) | set(recall) | set(trail_sec):
+    for code in set(fluency) | set(recall) | set(trail_sec):
         parts = [p for p in (zf.get(code), zr.get(code), -zt[code] if code in zt else None) if p is not None]
         if len(parts) == 3:
             out[code] = round(mean(parts), 3)
@@ -95,7 +96,7 @@ def main() -> None:
         item_rows.append({"code": code, "item_id": item, "domain": domain, "max_points": max_points,
                           "ai_score": "" if a_s is None else int(a_s), "human_score": "" if h_s is None else int(h_s),
                           "agree": "" if a_s is None or h_s is None else int(a_s == h_s),
-                          "ai_raw_count": a.get("raw_count", ""), "human_raw_count": h.get("raw_count_if_fluency", ""),
+                          "ai_raw_count": a.get("raw_count", ""), "human_raw_count": h.get("raw_count", h.get("raw_count_if_fluency", "")),
                           "ai_flag": a.get("flag", "")})
         for kind, val in (("ai", a_s), ("human", h_s)):
             if val is None:
@@ -106,11 +107,16 @@ def main() -> None:
 
     # speed & fluency composite (AI and human versions)
     trail_sec = {c: num(m.get("trail_seconds")) for c, m in meta.items()}
-    fruit_ai = {c: num(ai.get((c, "fluency"), {}).get("raw_count")) for c in meta}
-    fruit_h = {c: num(human.get((c, "fluency"), {}).get("raw_count_if_fluency")) for c in meta}
+    def raw(src, c, item):
+        r = src.get((c, item), {})
+        return num(r.get("raw_count", r.get("raw_count_if_fluency")))
+    flu_ai = {c: raw(ai, c, "fluency") for c in meta}
+    flu_h = {c: raw(human, c, "fluency") for c in meta}
+    learn = {(c, k, src_name): raw(src, c, item) for c in meta for k, item in (("1", "learn_1"), ("2", "learn_2"))
+             for src_name, src in (("ai", ai), ("human", human))}
     recall_ai = {c: num(ai.get((c, "recall"), {}).get("ai_score")) for c in meta}
     recall_h = {c: num(human.get((c, "recall"), {}).get("score")) for c in meta}
-    sf_ai, sf_h = speed_fluency(fruit_ai, recall_ai, trail_sec), speed_fluency(fruit_h, recall_h, trail_sec)
+    sf_ai, sf_h = speed_fluency(flu_ai, recall_ai, trail_sec), speed_fluency(flu_h, recall_h, trail_sec)
 
     domains = sorted({k.rsplit("_", 1)[0] for t in totals.values() for k in t if not k.startswith("app_total")})
     final = []
@@ -124,17 +130,26 @@ def main() -> None:
             row[f"{d}_ai"], row[f"{d}_human"] = fmt(t.get(f"{d}_ai", "")), fmt(t.get(f"{d}_human", ""))
         row.update({"at_ceiling_ai": int(row["app_total_ai"] == 30) if row["app_total_ai"] != "" else "",
                     "at_ceiling_human": int(row["app_total_human"] == 30) if row["app_total_human"] != "" else "",
-                    "fruit_count_ai": fmt(fruit_ai.get(code)) if fruit_ai.get(code) is not None else "",
-                    "fruit_count_human": fmt(fruit_h.get(code)) if fruit_h.get(code) is not None else "",
+                    "fluency_count_ai": fmt(flu_ai.get(code)) if flu_ai.get(code) is not None else "",
+                    "fluency_count_human": fmt(flu_h.get(code)) if flu_h.get(code) is not None else "",
                     "speed_fluency_ai": sf_ai.get(code, ""), "speed_fluency_human": sf_h.get(code, "")})
-        for k in ("trail_seconds", "trail_errors", "letters_misses", "letters_false_taps", "app_minutes", "replays_total",
+        for kind in ("ai", "human"):
+            l1, l2 = learn.get((code, "1", kind)), learn.get((code, "2", kind))
+            row[f"learn_1_words_{kind}"] = fmt(l1) if l1 is not None else ""
+            row[f"learn_2_words_{kind}"] = fmt(l2) if l2 is not None else ""
+            row[f"learning_total_{kind}"] = fmt(l1 + l2) if l1 is not None and l2 is not None else ""
+        timing_keys = [k for k in m if k.startswith(("latency_", "time_", "speech_latency"))]
+        for k in ("trail_seconds", "trail_errors", "trail_first_tap_s", "letters_misses", "letters_false_taps",
+                  "letters_lure_taps", "letters_mean_rt_ms", "rotate_correct", "rotate_mean_rt_s", "copy_box_draw_s",
+                  "recognition_hits", "recognition_false_alarms", "recognition_score", *timing_keys,
+                  "app_minutes", "replays_total",
                   "slums_status", "slums_minutes", "break_minutes", "corrections_total", "redo_count",
                   "skipped_count", "pauses_total", "mic_check", "retest"):
             row[k] = m.get(k, "")
         row.update({k: v for k, v in p.items() if k != "code"})
         final.append(row)
 
-    fields = list(final[0].keys())
+    fields = list(dict.fromkeys(k for r in final for k in r))
     write_csv(SCORES / "final_dataset.csv", final, fields)
     write_csv(SCORES / "item_level.csv", item_rows,
               ["code", "item_id", "domain", "max_points", "ai_score", "human_score", "agree",

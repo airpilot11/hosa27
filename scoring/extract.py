@@ -1,7 +1,8 @@
 """Step 1 - unpack exported iPad sessions.
 
-  * saves each spoken answer (audio) and the clock drawing (PNG) into data/media/<code>/
-  * computes the automatic app-logic scores (trail, letter tap)  -> data/scores/app_logic_scores.csv
+  * saves each spoken answer (audio) and the box drawing (PNG) into data/media/<code>/
+  * computes the automatic app-logic scores (trail, shape turning, letter tap) -> data/scores/app_logic_scores.csv
+  * writes per-item timing (answer latency, response time)        -> data/scores/item_timing.csv
   * writes one BLANK, BLIND human scoring sheet per participant  -> data/human_scoring/<code>_human_scoring.csv
   * creates data/scores/paper_scores.csv (template for SLUMS, SUS and background answers) if it doesn't exist
 
@@ -12,8 +13,24 @@ from __future__ import annotations
 import argparse
 from datetime import datetime
 
-from common import (HUMAN, MEDIA, SCORES, audio_ext, decode_data_url, ensure_dirs, load_sessions,
-                    read_csv, resolve_key, scored_steps, write_csv)
+from statistics import mean
+
+from common import (HUMAN, MEDIA, SCORES, ai_steps, audio_ext, decode_data_url, domain_slug, ensure_dirs,
+                    load_sessions, read_csv, resolve_key, scored_steps, write_csv)
+
+
+def sec(ms):
+    return round(ms / 1000, 2) if isinstance(ms, (int, float)) else ""
+
+
+def response_ms(it: dict):
+    """How long the participant took to respond on this item (instructions not included)."""
+    for k in ("responseMs", "rtMs", "drawMs"):
+        if isinstance(it.get(k), (int, float)):
+            return it[k]
+    if it.get("type") == "trail" and it.get("completed"):
+        return it.get("durationMs")
+    return None
 
 # Paper data entered by hand. `group` = A (no reported impairment) or B (reported MCI / mild dementia).
 # Group status is kept ONLY here - never on the blind human scoring sheets or in the AI prompts.
@@ -34,7 +51,7 @@ def main() -> None:
         print("No sessions found. Put the exported hosa27_*.json files in data/raw/ first.")
         return
 
-    meta_rows, logic_rows = [], []
+    meta_rows, logic_rows, timing_rows = [], [], []
     for s in sessions:
         code = s["code"]
         out = MEDIA / code
@@ -53,6 +70,8 @@ def main() -> None:
             it = items.get(st["id"], {})
             if st["id"].startswith("trail"):
                 detail = f"completed={it.get('completed')}; errors={it.get('errors')}; seconds={round((it.get('durationMs') or 0) / 1000, 1)}"
+            elif st.get("type") == "rotate" or st["id"].startswith("rotate"):
+                detail = f"choice={it.get('choice')}; correct={it.get('correct')}; seconds={sec(it.get('rtMs'))}"
             else:
                 detail = f"hits={it.get('hits')}; misses={it.get('misses')}; false_alarms={it.get('falseAlarms')}"
             missing = (not it) or it.get("skipped") or it.get("appScore") is None
@@ -62,14 +81,14 @@ def main() -> None:
 
         # blind human scoring sheet (AI-scored items only; no AI or SLUMS scores shown)
         human_rows = []
-        for st in scored_steps(s, ("ai_speech", "ai_vision")):
+        for st in ai_steps(s):
             it = items.get(st["id"], {})
             media = f"{st['id']}{audio_ext(it.get('audioMime'))}" if st["scoredBy"] == "ai_speech" else f"{st['id']}.png"
             has_media = bool(it.get("audio") or it.get("image"))
             human_rows.append({"code": code, "item_id": st["id"], "domain": st["domain"], "max_points": st["max"],
                                "media_file": f"data/media/{code}/{media}" if has_media else "NO MEDIA (skipped/missing) - leave score blank",
                                "item_flags": "; ".join(it.get("flags", [])) if it else "",
-                               "answer_key": resolve_key(st, s), "score": "", "raw_count_if_fluency": "",
+                               "answer_key": resolve_key(st, s), "score": "", "raw_count": "",
                                "scorer_initials": "", "notes": ""})
         sheet = HUMAN / f"{code}_human_scoring.csv"
         if sheet.exists():
@@ -77,6 +96,29 @@ def main() -> None:
         else:
             write_csv(sheet, human_rows, list(human_rows[0].keys()) if human_rows else ["code"])
 
+        # per-item timing + per-domain totals (latency = "Your turn" -> first speech; response = time to answer)
+        by_domain_resp, by_domain_lat, speech_lat = {}, {}, []
+        for st in s["steps"]:
+            it = items.get(st["id"])
+            if not it or it.get("skipped") or st.get("type") in ("intro", "end"):
+                continue
+            r = response_ms(it)
+            timing_rows.append({"code": code, "item_id": st["id"], "domain": st.get("domain"), "type": st.get("type"),
+                                "practice": "yes" if st["id"].endswith("practice") else "",
+                                "latency_s": sec(it.get("latencyMs")), "speech_end_s": sec(it.get("speechEndMs")),
+                                "response_s": sec(r), "instruction_s": sec(it.get("instructionMs")),
+                                "total_s": sec(it.get("totalMs")), "replays": it.get("replays", 0)})
+            if st["id"].endswith("practice") or not st.get("domain"):
+                continue
+            d = domain_slug(st["domain"])
+            if r is not None and st.get("type") != "vigilance":
+                by_domain_resp[d] = by_domain_resp.get(d, 0) + r
+            if st.get("type") == "speak" and isinstance(it.get("latencyMs"), (int, float)) and not st.get("countdown"):
+                by_domain_lat.setdefault(d, []).append(it["latencyMs"])
+                speech_lat.append(it["latencyMs"])
+        rot = [items.get(k, {}) for k in ("rotate_1", "rotate_2") if items.get(k) and not items[k].get("skipped")]
+        rot_rt = [x["rtMs"] for x in rot if isinstance(x.get("rtMs"), (int, float))]
+        recog = items.get("recognize", {})
         trail, letters = items.get("trail", {}), items.get("letters", {})
         minutes = ""
         if s.get("completedAt"):
@@ -85,7 +127,18 @@ def main() -> None:
         meta_rows.append({"code": code, "order": s.get("order"), "local_date": s.get("localDate"),
                           "trail_seconds": round(trail["durationMs"] / 1000, 1) if trail.get("completed") and trail.get("durationMs") else "",
                           "trail_errors": trail.get("errors", ""), "letters_misses": letters.get("misses", ""),
-                          "letters_false_taps": letters.get("falseAlarms", ""), "app_minutes": minutes,
+                          "letters_false_taps": letters.get("falseAlarms", ""),
+                          "letters_lure_taps": letters.get("lureTaps", ""), "letters_mean_rt_ms": letters.get("meanHitRtMs", "") or "",
+                          "trail_first_tap_s": sec(trail.get("firstTapMs")),
+                          "rotate_correct": sum(1 for x in rot if x.get("correct")) if len(rot) == 2 else "",
+                          "rotate_mean_rt_s": sec(mean(rot_rt)) if rot_rt else "",
+                          "copy_box_draw_s": sec(items.get("copy_box", {}).get("drawMs")),
+                          "recognition_hits": recog.get("hits", ""), "recognition_false_alarms": recog.get("falseAlarms", ""),
+                          "recognition_score": recog.get("recognitionScore", ""),
+                          "speech_latency_mean_s": sec(mean(speech_lat)) if speech_lat else "",
+                          **{f"latency_{d}_s": sec(mean(v)) for d, v in sorted(by_domain_lat.items())},
+                          **{f"time_{d}_s": sec(v) for d, v in sorted(by_domain_resp.items())},
+                          "app_minutes": minutes,
                           "replays_total": sum(int(i.get("replays") or 0) for i in items.values()),
                           "corrections_total": len(s.get("corrections", [])),
                           "redo_count": sum(1 for c in s.get("corrections", []) if c["type"].startswith("redo") or c["type"] == "back"),
@@ -102,7 +155,11 @@ def main() -> None:
                           "place": s.get("place"), "city": s.get("city"), "app_version": s.get("version")})
         print(f"  ✓ {code}: {len(items)} items extracted")
 
-    write_csv(SCORES / "session_meta.csv", meta_rows, list(meta_rows[0].keys()))
+    meta_fields = list(dict.fromkeys(k for r in meta_rows for k in r))  # domains can differ between versions
+    write_csv(SCORES / "session_meta.csv", meta_rows, meta_fields)
+    write_csv(SCORES / "item_timing.csv", timing_rows,
+              ["code", "item_id", "domain", "type", "practice", "latency_s", "speech_end_s", "response_s",
+               "instruction_s", "total_s", "replays"])
     write_csv(SCORES / "app_logic_scores.csv", logic_rows, ["code", "item_id", "domain", "max_points", "score", "details"])
 
     paper = SCORES / "paper_scores.csv"

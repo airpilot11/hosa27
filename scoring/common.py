@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 RAW = DATA / "raw"                      # exported JSON files from the iPad go here
-MEDIA = DATA / "media"                  # extracted audio + clock images (per participant)
+MEDIA = DATA / "media"                  # extracted audio + drawings (per participant)
 TRANSCRIPTS = DATA / "transcripts"      # speech-to-text output
 SCORES = DATA / "scores"                # AI + app-logic scores, merged dataset
 HUMAN = DATA / "human_scoring"          # blank sheets for blind human scorers
@@ -68,6 +68,17 @@ def decode_data_url(data_url: str) -> bytes:
 
 def scored_steps(session: dict, kinds: tuple[str, ...]) -> list[dict]:
     return [st for st in session["steps"] if st.get("scoredBy") in kinds and st.get("max", 0) > 0]
+
+
+def ai_steps(session: dict) -> list[dict]:
+    """Items the AI + human scorers handle: scored spoken/drawn items, plus 0-point 'countOnly' items
+    (learning trials) where only the word count (raw_count) is recorded."""
+    return [st for st in session["steps"] if st.get("scoredBy") in ("ai_speech", "ai_vision")
+            and (st.get("max", 0) > 0 or st.get("countOnly"))]
+
+
+def domain_slug(domain: str | None) -> str:
+    return (domain or "none").lower().replace(" ", "_")
 
 
 def write_csv(path: Path, rows: list[dict], fields: list[str]) -> None:

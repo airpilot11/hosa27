@@ -1,6 +1,6 @@
 """Step 3 - AI scoring with Claude.
 
-Sends each spoken answer (Whisper transcript) or clock drawing (image) to Claude together with the frozen
+Sends each spoken answer (Whisper transcript) or box drawing (image) to Claude together with the frozen
 scoring sheet (scoring/scoring_sheet.md) and saves one score per item to data/scores/ai_scores.csv.
 
   * Needs an Anthropic API key in the ANTHROPIC_API_KEY environment variable (set up by an adult - see README).
@@ -21,8 +21,8 @@ from pathlib import Path
 
 import anthropic
 
-from common import (MEDIA, SCORES, SCORING_SHEET, TRANSCRIPTS, ensure_dirs, load_sessions, read_csv,
-                    resolve_key, scored_steps)
+from common import (MEDIA, SCORES, SCORING_SHEET, TRANSCRIPTS, ai_steps, ensure_dirs, load_sessions, read_csv,
+                    resolve_key)
 
 MODEL = "claude-opus-5-5"
 FIELDS = ["code", "item_id", "domain", "max_points", "ai_score", "raw_count", "credited", "rationale",
@@ -32,7 +32,7 @@ SCHEMA = {
     "type": "object",
     "properties": {
         "score": {"type": "integer", "description": "points awarded for this item"},
-        "raw_count": {"type": "integer", "description": "fluency only: number of valid unique fruits; otherwise 0"},
+        "raw_count": {"type": "integer", "description": "fluency: number of valid words starting with P; learn_1/learn_2: number of list words said (0-5); otherwise 0"},
         "credited": {"type": "array", "items": {"type": "string"}, "description": "answers/criteria that earned credit"},
         "rationale": {"type": "string", "description": "one or two sentences citing the scoring-sheet rule applied"},
     },
@@ -56,7 +56,7 @@ def build_content(step: dict, session: dict, transcript: str | None, image_path)
     if image_path is not None:
         data = base64.standard_b64encode(image_path.read_bytes()).decode()
         return [{"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": data}},
-                {"type": "text", "text": header + "The image above is the participant's clock drawing. Score it."}]
+                {"type": "text", "text": header + "The image above is the participant's drawing for this item. Score it."}]
     return [{"type": "text", "text": header + f'Automatic speech-to-text transcript of the participant\'s answer:\n"""{transcript}"""\nScore it.'}]
 
 
@@ -95,7 +95,7 @@ def main() -> None:
                 continue
             tpath = TRANSCRIPTS / f"{code}.json"
             transcripts = json.loads(tpath.read_text()) if tpath.exists() else {}
-            for st in scored_steps(s, ("ai_speech", "ai_vision")):
+            for st in ai_steps(s):
                 if (code, st["id"]) in done:
                     continue
                 row = {"code": code, "item_id": st["id"], "domain": st["domain"], "max_points": st["max"],

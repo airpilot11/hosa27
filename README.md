@@ -4,7 +4,7 @@ This folder has two parts:
 
 | Part | Folder | Runs on | What it does |
 |---|---|---|---|
-| **Participant app** | `app/` | **iPad** (Safari, added to the Home Screen) | A 7-minute self-check: speaks every instruction, records spoken answers, has a clock drawing pad and tap tasks, and saves everything on the iPad |
+| **Participant app** | `app/` | **iPad** (Safari, added to the Home Screen) | A ~10-minute self-check: speaks every instruction, records spoken answers, has a drawing pad and tap tasks, times every answer, and saves everything on the iPad |
 | **Scoring tools** | `scoring/` | **Mac** | Speech-to-text (on this Mac), AI scoring with Claude, blank blind human-scoring sheets, and a final dataset for jamovi/JASP |
 
 `data/` holds participant data. It stays on this Mac and is excluded from GitHub by `.gitignore`.
@@ -27,9 +27,9 @@ Open **http://localhost:8027/?researcher=1**, or tick **🔧 Researcher mode** o
 | Button | What it does |
 |---|---|
 | ◀ Back / Skip ▶ | Go to the previous or next step |
-| Step menu | Jump straight to any of the 26 steps (points shown) |
+| Step menu | Jump straight to any of the 30 steps (points shown) |
 | 🔊 Voice | normal → fast → mute |
-| ⏱ Timers | real → short (recordings stop after 4 s, the fruit timer after 6 s, the trail after 20 s) |
+| ⏱ Timers | real → short (recordings stop after 4 s, the word-fluency timer after 6 s, the trail after 20 s, shape questions after 8 s) |
 | 📋 Saved data | See what has been saved so far (audio length, drawing, automatic scores) |
 | ✕ Exit | End the practice run and go back to the staff screen |
 
@@ -38,7 +38,7 @@ Practice runs are marked as practice and the scoring tools ignore them. The micr
 ### Voice and subtitles
 - **Subtitles:** every spoken instruction appears under the question with the current word highlighted as it's spoken. Words, numbers and sentences that participants must **remember or repeat are never shown**; the subtitle says "🔊 Listen carefully…" instead, so the memory tasks stay listening tasks.
 - **Why audio files:** the browser's built-in voice can silently fail. This happened in Chrome on the Mac: it accepted the request but never spoke. The app therefore plays a **voice pack** of real audio files through Web Audio, which is reliable on iPad and Mac. If there's no pack and the device voice stalls, the app detects it after 2.5 s, shows a staff warning, and continues with subtitles only.
-- A voice pack made with the Mac's **Samantha** voice is included now (96 files: one per sentence, plus one per word or number to remember). Re-run the tool after downloading a Premium voice for a more natural sound:
+- A voice pack made with the Mac's **Ava (Enhanced)** voice at 135 words per minute is included now (one file per sentence, plus one per word or number to remember). Re-run the tool after changing any `say` text in `tasks.js`:
 
 ### Voice (less robotic)
 The app plays a **voice pack** (one audio file per instruction) when there is one. Otherwise it uses the device's built-in voice. A voice pack sounds more natural, and every participant hears the identical recording, which is better standardization for your Methods section.
@@ -92,7 +92,7 @@ On **each iPad**:
 4. **Press and hold the top-right corner for 2 seconds** for the staff menu (pause, restart step, end and save). At the "All done" screen, the same hold returns to the staff screen.
 5. Everything is saved on the iPad after **every step**, so a crash loses at most one item.
 6. At the end of the day: **Saved sessions → Export all → AirDrop to the Mac** (or Save to Files). Put the files in **`hosa27/data/raw/`**.
-7. **To see everything that was saved:** go to **Saved sessions** and tap **View** next to a session. It shows every step's status, a playable recording for each spoken answer, the clock drawing, automatic scores (trail, letters), timing, replays and staff help. **Summary spreadsheet (CSV)** exports one row per participant × step (no audio) for a quick check in Excel or Google Sheets.
+7. **To see everything that was saved:** go to **Saved sessions** and tap **View** next to a session. It shows every step's status, a playable recording for each spoken answer, the box drawing, automatic scores (trail, shapes, letters), answer timing, replays and staff help. **Summary spreadsheet (CSV)** exports one row per participant × step (no audio) for a quick check in Excel or Google Sheets.
 8. Data is stored in the browser's storage on that iPad. Clearing Safari website data or deleting the app icon can erase it, so **export every day**.
 
 Participants never see a score.
@@ -117,20 +117,39 @@ Participants never see a score.
 
 All corrections appear in **View** (corrections log), the summary CSV and `final_dataset.csv` (corrections_total, redo_count, skipped_count, pauses_total, mic_check, retest). They give you the numbers you need for the Methods section and any decisions about excluding data.
 
+## Item set and research variables (app v0.7.0)
+
+Same 8 thinking-skill areas as the MoCA, **30 points**, but every item is original and **none repeats the paper SLUMS** (no animal naming, clock, money math, backward digits, story or SLUMS words). Items are harder and more graded than v0.6 so healthy older adults don't all score 28–30.
+
+| Area (points) | Items |
+|---|---|
+| Orientation (6) | day, date, month, year, place, city (kept standard) |
+| Executive (2) | trail with 12 circles, 1-A-2-B … 6-F (practice first) |
+| Visuospatial (3) | copy a 3-D box (1, AI-scored drawing) + 2 shape-turning questions (1 each, app-scored; practice first) |
+| Naming (3) | hourglass, accordion, peacock |
+| Attention (6) | 6- and 7-digit lists in the same order (1 each), visual letter tap with look-alike letters (1), serial 7s from 80 (3) |
+| Language (3) | two longer sentences with a clause (1 each), words starting with P in 1 minute (1; 11+ words) |
+| Abstraction (2) | newspaper–radio, poem–painting |
+| Delayed memory (5) | the 5 words, free recall |
+
+**Research variables (not in the 30):** learning-trial word counts (`learn_1_words`, `learn_2_words`, `learning_total`), word recognition (`recognition_hits`, `recognition_false_alarms`, `recognition_score` = hits − false alarms), P-word count, trail time and first-tap time, shape-turning accuracy and time, box drawing time, letter-tap misses, false taps, look-alike taps and mean reaction time.
+
+**Timing variables:** for every spoken answer the app records **latency** (from “Your turn” to the first sound lasting ≥150 ms, measured from the mic level, so it's approximate in noisy rooms), **speech end** and **response time**. Tap and drawing items record their own response times. `extract.py` writes one row per item to `item_timing.csv` and adds `speech_latency_mean_s`, `latency_<area>_s` (mean) and `time_<area>_s` (total response time) per participant.
+
 ## 4. Scoring on the Mac (after data collection)
 
 ```bash
 cd ~/Desktop/hosa27
-.venv/bin/python scoring/extract.py       # unpack audio + clock images, automatic scores, blank human sheets
+.venv/bin/python scoring/extract.py       # unpack audio + drawings, automatic scores, timing, blank human sheets
 .venv/bin/python scoring/transcribe.py    # speech-to-text on this Mac (first run downloads the model)
 .venv/bin/python scoring/score_ai.py --dry-run   # preview one AI request (free)
 .venv/bin/python scoring/score_ai.py      # AI scoring with Claude
 .venv/bin/python scoring/merge.py         # final_dataset.csv + item_level.csv for jamovi/JASP
 ```
 
-- **Human scoring (blind):** open `data/human_scoring/<code>_human_scoring.csv`. Listen to each audio file or look at the clock image in `data/media/<code>/` and enter scores using **`scoring/scoring_sheet.md`**. Each partner scores only participants whose SLUMS they did **not** give. Do this **before** looking at `ai_scores.csv`.
+- **Human scoring (blind):** open `data/human_scoring/<code>_human_scoring.csv`. Listen to each audio file or look at the box drawing in `data/media/<code>/` and enter scores using **`scoring/scoring_sheet.md`**. Each partner scores only participants whose SLUMS they did **not** give. Do this **before** looking at `ai_scores.csv`.
 - **Paper data:** enter SLUMS totals, SUS totals and background answers in `data/scores/paper_scores.csv`, including **group** (A = no reported impairment, B = reported MCI / mild dementia), reported_status, who reported it, consent type, site and age. Group status lives **only** in this file. It is never on the blind scoring sheets or sent to the AI.
-- `final_dataset.csv` also includes the **timed measures** (trail seconds, fruit count, letter-tap errors, minutes, replays), a **speed_fluency** composite (fruits + words recalled + trail speed, standardized), and **at_ceiling** flags for the ceiling-effect check.
+- `final_dataset.csv` also includes the **extra research variables** (see “Item set and research variables” below), a **speed_fluency** composite (P words + words recalled + trail speed, standardized), and **at_ceiling** flags for the ceiling-effect check. Per-item timing is in `data/scores/item_timing.csv`.
 - **SUS scoring:** for each item, odd items score (response − 1) and even items score (5 − response). Add them up and multiply by 2.5 to get a 0–100 score.
 
 ### AI setup (an adult does this once)
