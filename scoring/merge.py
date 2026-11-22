@@ -13,7 +13,30 @@ from __future__ import annotations
 from collections import defaultdict
 from statistics import mean, pstdev
 
-from common import HUMAN, SCORES, read_csv, write_csv
+from common import HUMAN, SCORES, load_sessions, read_csv, scored_steps, write_csv
+
+
+def fmt(v):
+    """Whole-number floats print as integers (17.0 -> 17); everything else unchanged."""
+    return int(v) if isinstance(v, float) and v.is_integer() else v
+
+
+def expected_items(codes, human: dict, ai: dict) -> dict:
+    """{code: [(item_id, domain, max_points)]} for every AI/human-scored item, taken from the session itself,
+    so an item missing from EITHER the AI file or the human sheet is counted as missing (total left blank)."""
+    sessions = {s["code"]: s for s in load_sessions(include_demo=True)}
+    out = {}
+    for code in codes:
+        if code in sessions:
+            out[code] = [(st["id"], st["domain"], st["max"]) for st in scored_steps(sessions[code], ("ai_speech", "ai_vision"))]
+        else:  # raw export not available - fall back to whatever items either source lists
+            seen = {}
+            for src in (human, ai):
+                for (c, item), r in src.items():
+                    if c == code:
+                        seen.setdefault(item, (item, r["domain"], r["max_points"]))
+            out[code] = list(seen.values())
+    return out
 
 
 def num(v):
@@ -65,11 +88,11 @@ def main() -> None:
                 continue
             totals[r["code"]][f"app_total_{kind}"] += s
             totals[r["code"]][f"{r['domain']}_{kind}"] += s
-    for key, h in human.items():
-        code, item = key
-        a = ai.get(key, {})
+    expected = expected_items(meta, human, ai)
+    for code, item, domain, max_points in ((c, *it) for c, items in expected.items() for it in items):
+        h, a = human.get((code, item), {}), ai.get((code, item), {})
         a_s, h_s = num(a.get("ai_score")), num(h.get("score"))
-        item_rows.append({"code": code, "item_id": item, "domain": h["domain"], "max_points": h["max_points"],
+        item_rows.append({"code": code, "item_id": item, "domain": domain, "max_points": max_points,
                           "ai_score": "" if a_s is None else int(a_s), "human_score": "" if h_s is None else int(h_s),
                           "agree": "" if a_s is None or h_s is None else int(a_s == h_s),
                           "ai_raw_count": a.get("raw_count", ""), "human_raw_count": h.get("raw_count_if_fluency", ""),
@@ -79,7 +102,7 @@ def main() -> None:
                 missing[code][kind] += 1
             else:
                 totals[code][f"app_total_{kind}"] += val
-                totals[code][f"{h['domain']}_{kind}"] += val
+                totals[code][f"{domain}_{kind}"] += val
 
     # speed & fluency composite (AI and human versions)
     trail_sec = {c: num(m.get("trail_seconds")) for c, m in meta.items()}
@@ -94,14 +117,15 @@ def main() -> None:
     for code, m in sorted(meta.items()):
         t, p = totals[code], paper.get(code, {})
         row = {"code": code, "order": m["order"], "completed": m["completed"], "help_events": m["help_events"],
-               "app_total_ai": t.get("app_total_ai", "") if missing[code]["ai"] == 0 else "",
-               "app_total_human": t.get("app_total_human", "") if missing[code]["human"] == 0 else "",
+               "app_total_ai": fmt(t.get("app_total_ai", 0.0)) if missing[code]["ai"] == 0 else "",
+               "app_total_human": fmt(t.get("app_total_human", 0.0)) if missing[code]["human"] == 0 else "",
                "ai_items_missing": missing[code]["ai"], "human_items_missing": missing[code]["human"]}
         for d in domains:
-            row[f"{d}_ai"], row[f"{d}_human"] = t.get(f"{d}_ai", ""), t.get(f"{d}_human", "")
+            row[f"{d}_ai"], row[f"{d}_human"] = fmt(t.get(f"{d}_ai", "")), fmt(t.get(f"{d}_human", ""))
         row.update({"at_ceiling_ai": int(row["app_total_ai"] == 30) if row["app_total_ai"] != "" else "",
-                    "fruit_count_ai": fruit_ai.get(code) if fruit_ai.get(code) is not None else "",
-                    "fruit_count_human": fruit_h.get(code) if fruit_h.get(code) is not None else "",
+                    "at_ceiling_human": int(row["app_total_human"] == 30) if row["app_total_human"] != "" else "",
+                    "fruit_count_ai": fmt(fruit_ai.get(code)) if fruit_ai.get(code) is not None else "",
+                    "fruit_count_human": fmt(fruit_h.get(code)) if fruit_h.get(code) is not None else "",
                     "speed_fluency_ai": sf_ai.get(code, ""), "speed_fluency_human": sf_h.get(code, "")})
         for k in ("trail_seconds", "trail_errors", "letters_misses", "letters_false_taps", "app_minutes", "replays_total",
                   "slums_status", "slums_minutes", "break_minutes", "corrections_total", "redo_count",

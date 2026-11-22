@@ -150,8 +150,13 @@ def main() -> None:
                     row.update(ai_score="", rationale="model declined", flag="REFUSAL")
                     w.writerow(row); f.flush(); continue
                 text = next((b.text for b in resp.content if b.type == "text"), "{}")
-                result = json.loads(text)
-                score = max(0, min(int(result["score"]), int(st["max"])))
+                try:
+                    result = json.loads(text)
+                    score = max(0, min(int(result["score"]), int(st["max"])))
+                except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+                    # not written to the CSV, so the next run retries this item
+                    print(f"  ! {code} {st['id']}: unreadable AI reply (stop_reason={resp.stop_reason}) - will retry on next run")
+                    continue
                 row.update(ai_score=score, raw_count=result.get("raw_count", 0),
                            credited="; ".join(result.get("credited", [])), rationale=result.get("rationale", ""))
                 if score != result["score"]:
