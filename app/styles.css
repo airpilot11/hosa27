@@ -377,3 +377,27 @@ table.list th { color: var(--muted); font-size: 13px; text-transform: uppercase;
   .word-btn { min-height: 56px; }
   .copy-figure { width: clamp(150px, 26vh, 230px); }
 }
+
+/* shape questions: on-screen reminder + how-it-works demo */
+.rot-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 22px; font-size: calc(19px * var(--fs)); }
+.rot-legend span { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-weight: 700; }
+.rot-legend span.ok { background: var(--ok-soft); color: var(--ok); }
+.rot-legend span.no { background: var(--bad-soft); color: var(--bad); }
+.rot-legend i { display: inline-block; width: 36px; height: 36px; }
+.rot-legend .shape-svg rect { fill: currentColor; }
+.rot-demo { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(14px, 3vw, 32px); width: 100%; max-width: 760px; }
+.demo-card { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 18px 12px; border-radius: 24px; border: 4px solid; text-align: center; }
+.demo-card.ok { border-color: var(--ok); background: var(--ok-soft); color: var(--ok); }
+.demo-card.no { border-color: var(--bad); background: var(--bad-soft); color: var(--bad); }
+.demo-card b { font-size: calc(clamp(26px, 3vw, 32px) * var(--fs)); }
+.demo-card span { font-size: calc(clamp(18px, 2.2vw, 22px) * var(--fs)); color: var(--ink); font-weight: 600; }
+.demo-shape { position: relative; width: clamp(130px, 18vw, 190px); height: clamp(130px, 18vw, 190px); }
+.demo-shape .shape-svg rect { fill: var(--ink); }
+.demo-shape > div { width: 100%; height: 100%; }
+.demo-shape.mirror-line::after { content: ""; position: absolute; left: 50%; top: 4%; bottom: 4%; border-left: 3px dashed var(--bad); opacity: .6; }
+.spin { animation: turnSteps 8s ease-in-out infinite; }
+.flip { animation: flipMirror 4s ease-in-out infinite; }
+@keyframes turnSteps { 0%, 14% { transform: rotate(0); } 25%, 39% { transform: rotate(90deg); } 50%, 64% { transform: rotate(180deg); } 75%, 89% { transform: rotate(270deg); } 100% { transform: rotate(360deg); } }
+@keyframes flipMirror { 0%, 30% { transform: scaleX(1); } 50%, 80% { transform: scaleX(-1); } 100% { transform: scaleX(1); } }
+@media (prefers-reduced-motion: reduce) { .spin, .flip { animation-duration: 16s; } }
+@media (max-height: 900px) { .demo-shape { width: clamp(110px, 20vh, 170px); height: clamp(110px, 20vh, 170px); } .rot-legend i { width: 24px; height: 24px; } }

@@ -118,7 +118,6 @@ def main() -> None:
                 speech_lat.append(it["latencyMs"])
         rot = [items.get(k, {}) for k in ("rotate_1", "rotate_2") if items.get(k) and not items[k].get("skipped")]
         rot_rt = [x["rtMs"] for x in rot if isinstance(x.get("rtMs"), (int, float))]
-        recog = items.get("recognize", {})
         trail, letters = items.get("trail", {}), items.get("letters", {})
         minutes = ""
         if s.get("completedAt"):
@@ -133,8 +132,6 @@ def main() -> None:
                           "rotate_correct": sum(1 for x in rot if x.get("correct")) if len(rot) == 2 else "",
                           "rotate_mean_rt_s": sec(mean(rot_rt)) if rot_rt else "",
                           "copy_box_draw_s": sec(items.get("copy_box", {}).get("drawMs")),
-                          "recognition_hits": recog.get("hits", ""), "recognition_false_alarms": recog.get("falseAlarms", ""),
-                          "recognition_score": recog.get("recognitionScore", ""),
                           "speech_latency_mean_s": sec(mean(speech_lat)) if speech_lat else "",
                           **{f"latency_{d}_s": sec(mean(v)) for d, v in sorted(by_domain_lat.items())},
                           **{f"time_{d}_s": sec(v) for d, v in sorted(by_domain_resp.items())},

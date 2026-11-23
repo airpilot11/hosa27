@@ -1,4 +1,4 @@
-# hosa27 App Scoring Sheet (DRAFT v0.2 (app v0.7.0 items), FREEZE BY DEC 4, 2026)
+# hosa27 App Scoring Sheet (DRAFT v0.3 (app v0.8.0 items), FREEZE BY DEC 4, 2026)
 
 Human scorers and the AI use this exact sheet. Total = 30 points. Do not change it after real data collection starts.
 Record the date you froze it here: ________
@@ -31,10 +31,8 @@ The answer key is filled in from the session date and the place and city the sta
 - **rotate_1, rotate_2** (1 each, scored automatically by the app): 1 if the first tap is the shape that is the same as the target, just turned; 0 if a flipped (mirror) shape is tapped or no answer within 60 s. (Not on the human sheet.)
 
 ## Naming (3 items, 1 point each)
-- **name_1**: hourglass (also accept "sand timer", "egg timer", "sand glass").
-- **name_2**: accordion (also accept "concertina", "squeezebox").
-- **name_3**: peacock (also accept "peafowl", "peahen").
-- A general category or description ("a timer", "an instrument", "a bird", "a fancy bird") = 0.
+- **name_1**: anchor. **name_2**: pineapple. **name_3**: turtle (also accept "tortoise").
+- A general category or description ("a boat thing", "a fruit", "an animal") = 0.
 
 ## Attention
 - **digits_6** (1): exact sequence **7 2 8 5 1 6**, same order, nothing missing or added.
@@ -57,7 +55,7 @@ The answer key is filled in from the session date and the place and city the sta
 Words: **river, candle, jacket, garden, violin**. 1 point per word recalled without cues, in any order. Close forms count ("rivers", "candles"). Different words with similar meaning do not ("coat" ≠ jacket, "fiddle" ≠ violin).
 
 ## Word counts (0 points, research variables)
-- **learn_1, learn_2**: score = 0. Put the number of the 5 list words (river, candle, jacket, garden, violin) said correctly in `raw_count` (0–5), using the same rules as recall.
+- **learn_1**: score = 0. Put the number of the 5 list words (river, candle, jacket, garden, violin) said correctly in `raw_count` (0–5), using the same rules as recall.
 
 ## Not scored
-welcome, trail_practice, rotate_practice, recognize (scored by the app as a research variable, not part of the 30), end.
+welcome, trail_practice, rotate_intro, rotate_practice, end.

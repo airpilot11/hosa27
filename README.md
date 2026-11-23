@@ -43,15 +43,16 @@ Practice runs are marked as practice and the scoring tools ignore them. The micr
 ### Voice (less robotic)
 The app plays a **voice pack** (one audio file per instruction) when there is one. Otherwise it uses the device's built-in voice. A voice pack sounds more natural, and every participant hears the identical recording, which is better standardization for your Methods section.
 
-- **Option A: natural Mac voice.** Download a free Premium voice: **System Settings → Accessibility → Spoken Content → System Voice → Manage Voices… → English (US) → Ava (Premium)** (or Zoe / Evan / Nathan Premium). Then run:
+- **Option A: Mac voice (current).** The pack uses **Ava (Enhanced)** at 135 words per minute, with short pauses at commas, saved at 44.1 kHz / 96 kbps (the old 22 kHz / 35 kbps files sounded muffled). Ava's own quality is limited, so some words can still sound slurred. Rebuild after changing any `say` text:
   ```bash
   python3 tools/make_voice_audio.py
   ```
-  To pick the voice and speed yourself: `--voice "Zoe (Premium)" --rate 135`. To see installed voices: `--list-voices`.
-- **Option B: your own voice (most natural).** Record every line listed in **`app/audio/RECORDING_SCRIPT.md`** (Voice Memos is fine) and save each one with the listed file name in **`app/audio/own/`**. Then run:
+  To pick the voice and speed yourself: `--voice "Ava (Enhanced)" --rate 125`. To see installed voices: `--list-voices`.
+- **Option B: a real person's voice (clearest; recommended for older adults).** One person records every line in **`app/audio/RECORDING_SCRIPT.md`**: one short sentence, word or number per file, so a mistake means re-recording one line. Use Voice Memos in a quiet room, speak slowly and pronounce every consonant, and save each file with the listed name in **`app/audio/own/`**. Then run:
   ```bash
   python3 tools/make_voice_audio.py --own
   ```
+  Any line without a recording falls back to the Mac voice, so you can record in batches.
 - **Undo:** `python3 tools/make_voice_audio.py --remove` goes back to the built-in voice.
 - **Without a pack:** the setup screen has a voice menu. ★ marks natural (Premium/Enhanced) voices installed on that device. On the iPad you can download one under **Settings → Accessibility → Spoken Content → Voices**.
 
@@ -117,22 +118,22 @@ Participants never see a score.
 
 All corrections appear in **View** (corrections log), the summary CSV and `final_dataset.csv` (corrections_total, redo_count, skipped_count, pauses_total, mic_check, retest). They give you the numbers you need for the Methods section and any decisions about excluding data.
 
-## Item set and research variables (app v0.7.0)
+## Item set and research variables (app v0.8.0)
 
-Same 8 thinking-skill areas as the MoCA, **30 points**, but every item is original and **none repeats the paper SLUMS** (no animal naming, clock, money math, backward digits, story or SLUMS words). Items are harder and more graded than v0.6 so healthy older adults don't all score 28–30.
+No topic labels (e.g. "Memory") are shown to participants, to avoid biasing answers. Same 8 thinking-skill areas as the MoCA, **30 points**, but every item is original and **none repeats the paper SLUMS** (no animal naming, clock, money math, backward digits, story or SLUMS words). Items are harder and more graded than v0.6 so healthy older adults don't all score 28–30.
 
 | Area (points) | Items |
 |---|---|
 | Orientation (6) | day, date, month, year, place, city (kept standard) |
 | Executive (2) | trail with 12 circles, 1-A-2-B … 6-F (practice first) |
-| Visuospatial (3) | copy a 3-D box (1, AI-scored drawing) + 2 shape-turning questions (1 each, app-scored; practice first) |
-| Naming (3) | hourglass, accordion, peacock |
+| Visuospatial (3) | copy a 3-D box (1, AI-scored drawing) + 2 shape-turning questions (1 each, app-scored), after a how-it-works screen with moving examples and a practice question (repeated once if missed) |
+| Naming (3) | anchor, pineapple, turtle (common objects, so naming tests word-finding, not knowledge) |
 | Attention (6) | 6- and 7-digit lists in the same order (1 each), visual letter tap with look-alike letters (1), serial 7s from 80 (3) |
 | Language (3) | two longer sentences with a clause (1 each), words starting with P in 1 minute (1; 11+ words) |
 | Abstraction (2) | newspaper–radio, poem–painting |
-| Delayed memory (5) | the 5 words, free recall |
+| Delayed memory (5) | the 5 words (heard once, at the start), free recall |
 
-**Research variables (not in the 30):** learning-trial word counts (`learn_1_words`, `learn_2_words`, `learning_total`), word recognition (`recognition_hits`, `recognition_false_alarms`, `recognition_score` = hits − false alarms), P-word count, trail time and first-tap time, shape-turning accuracy and time, box drawing time, letter-tap misses, false taps, look-alike taps and mean reaction time.
+**Research variables (not in the 30):** words repeated right after hearing the list (`learn_words`), P-word count, trail time and first-tap time, shape-turning accuracy and time, box drawing time, letter-tap misses, false taps, look-alike taps and mean reaction time.
 
 **Timing variables:** for every spoken answer the app records **latency** (from “Your turn” to the first sound lasting ≥150 ms, measured from the mic level, so it's approximate in noisy rooms), **speech end** and **response time**. Tap and drawing items record their own response times. `extract.py` writes one row per item to `item_timing.csv` and adds `speech_latency_mean_s`, `latency_<area>_s` (mean) and `time_<area>_s` (total response time) per participant.
 

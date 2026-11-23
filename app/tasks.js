@@ -6,7 +6,7 @@
 // collection starts. The version number is saved into every session.
 // =====================================================================
 
-const HOSA27_VERSION = "0.7.0";
+const HOSA27_VERSION = "0.8.0";
 
 // What participants see (header, welcome screen, footer). Edit freely.
 const STUDY = {
@@ -16,12 +16,7 @@ const STUDY = {
   minutes: 10,
 };
 
-// Friendly section names shown on each question card.
-const DOMAIN_LABELS = {
-  "Orientation": "Today & here", "Memory": "Memory", "Executive": "Connect the dots",
-  "Visuospatial": "Shapes", "Naming": "Naming", "Attention": "Attention",
-  "Language": "Language", "Abstraction": "Reasoning", "Delayed memory": "Memory",
-};
+// (Domain names are NOT shown to participants - labels like "Memory" can change how people answer.)
 
 // Recorded voice pack. These are filled in automatically by app/audio/audio_manifest.js,
 // which tools/make_voice_audio.py creates (natural Mac voice OR your own recordings).
@@ -45,10 +40,8 @@ const VOICE = {
 // v0.6 so healthy older adults don't all score 28-30.
 // ---------------------------------------------------------------------
 
-// 5-word list (not the SLUMS or MoCA words). Learned twice, recalled at the end, then recognized.
+// 5-word list (not the SLUMS or MoCA words). Heard once, recalled at the end.
 const WORDS = ["river", "candle", "jacket", "garden", "violin"];
-// Recognition: the 5 words + 5 look-alike / related lures, in a fixed mixed order.
-const RECOGNITION = ["stream", "candle", "coat", "violin", "garden", "lamp", "guitar", "jacket", "yard", "river"];
 
 // Letter-tap (visual vigilance): target M (8 targets) among letters, including look-alikes N and W.
 const LETTERS = ["T","M","N","R","M","W","B","M","N","S","M","H",
@@ -78,7 +71,7 @@ const SHAPES = {
 
 // ---------------------------------------------------------------------
 // STEPS run in this order. Fields:
-//   type      intro | speak | trail | draw | rotate | vigilance | recognize | end
+//   type      intro | speak | trail | draw | rotate_intro | rotate | vigilance | end
 //   domain    MoCA thinking-skill area (for analysis)
 //   max       points for this item (0 = not in the 30-point total)
 //   scoredBy  ai_speech | ai_vision | app_logic | none
@@ -116,14 +109,10 @@ const STEPS = [
     text: "What city are we in?", say: "What city are we in?",
     maxSeconds: 15, allowReplay: true, key: "{city}" },
 
-  // ---- Memory: learning (0 points, but words recalled are counted = learning variable) ----
+  // ---- Memory: learning, heard ONCE (0 points, but words recalled are counted = learning variable) ----
   { id: "learn_1", type: "speak", domain: "Memory", max: 0, scoredBy: "ai_speech", countOnly: true,
-    text: "Listen to 5 words.\nThen say all the words you remember.",
-    say: "I will say five words. Listen carefully. When I finish, say all the words you remember. Any order is fine.",
-    sequence: WORDS, sequenceGapMs: 1500, maxSeconds: 25, allowReplay: false, key: WORDS.join(", ") },
-  { id: "learn_2", type: "speak", domain: "Memory", max: 0, scoredBy: "ai_speech", countOnly: true,
-    text: "Listen to the same 5 words again.\nThen say all the words you remember.",
-    say: "I will say the same five words again. Try to remember them. I will ask for them again later. When I finish, say all the words you remember.",
+    text: "Listen to 5 words and try to remember them.\nThen say all the words you remember.",
+    say: "I will say five words. Listen carefully, and try to remember them. I will ask for them again later. When I finish, say all the words you remember.",
     sequence: WORDS, sequenceGapMs: 1500, maxSeconds: 25, allowReplay: false, key: WORDS.join(", ") },
 
   // ---- Executive function: trail, 12 circles (2) ----
@@ -141,29 +130,35 @@ const STEPS = [
     text: "Copy this box as carefully as you can.",
     say: "Look at the box. Please copy it in the empty drawing space, as carefully as you can. Draw every line you see. Use your finger. Tap Done when you are finished.",
     allowReplay: true, key: "3-D box: 12 lines (front face, back face, 4 connecting edges), parallel edges roughly parallel" },
+  // Shape turning: a how-it-works screen with moving examples, then a practice (repeated once if
+  // answered wrong, with the answer shown), then 2 scored questions. A reminder stays on screen.
+  { id: "rotate_intro", type: "rotate_intro", domain: "Visuospatial", max: 0, scoredBy: "none", practice: true,
+    shape: "L",
+    text: "How the shape questions work",
+    say: "Next, some shape questions. Watch the shapes on the screen. On the left, the shape is turning around. It is still the same shape. On the right, the shape is flipping over, like in a mirror. A flipped shape is not the same. In each question, tap the shape that is the same, just turned. Tap Continue when you are ready." },
   { id: "rotate_practice", type: "rotate", domain: "Visuospatial", max: 0, scoredBy: "none", practice: true,
     shape: "L", choices: [{ rot: 90, mirror: true }, { rot: 0, mirror: true }, { rot: 180, mirror: false }, { rot: 270, mirror: true }],
-    text: "Which shape is the SAME as the top shape, just turned?",
-    say: "Look at the shape at the top. One shape below is the same shape, just turned around. The others are flipped over, like in a mirror. Tap the one that is the same. Let's practice." },
+    text: "Practice: tap the shape that is the SAME as the top one, just turned.",
+    say: "Let's practice. Look at the shape at the top. Tap the shape below that is the same, just turned." },
   { id: "rotate_1", type: "rotate", domain: "Visuospatial", max: 1, scoredBy: "app_logic",
     shape: "P", choices: [{ rot: 180, mirror: true }, { rot: 90, mirror: false }, { rot: 270, mirror: true }, { rot: 0, mirror: true }],
-    text: "Tap the shape that is the SAME, just turned.",
+    text: "Tap the shape that is the SAME as the top one, just turned.",
     say: "Now try this one. Tap the shape that is the same as the top shape, just turned." },
   { id: "rotate_2", type: "rotate", domain: "Visuospatial", max: 1, scoredBy: "app_logic",
     shape: "F", choices: [{ rot: 90, mirror: true }, { rot: 270, mirror: true }, { rot: 0, mirror: true }, { rot: 270, mirror: false }],
-    text: "Tap the shape that is the SAME, just turned.",
-    say: "One more. Tap the shape that is the same, just turned." },
+    text: "Tap the shape that is the SAME as the top one, just turned.",
+    say: "One more. Tap the shape that is the same as the top shape, just turned." },
 
-  // ---- Naming (3): less common objects (pictures are the iPad's built-in emoji) ----
+  // ---- Naming (3): common, familiar objects with clear pictures (the iPad's built-in emoji) ----
   { id: "name_1", type: "speak", domain: "Naming", max: 1, scoredBy: "ai_speech",
-    text: "What is this called?", say: "What is this called?", emoji: "⏳",
-    maxSeconds: 12, allowReplay: true, key: "hourglass (also accept: sand timer, egg timer)" },
+    text: "What is this called?", say: "What is this called?", emoji: "⚓",
+    maxSeconds: 12, allowReplay: true, key: "anchor" },
   { id: "name_2", type: "speak", domain: "Naming", max: 1, scoredBy: "ai_speech",
-    text: "What is this called?", say: "What is this called?", emoji: "🪗",
-    maxSeconds: 12, allowReplay: true, key: "accordion (also accept: concertina, squeezebox)" },
+    text: "What is this called?", say: "What is this called?", emoji: "🍍",
+    maxSeconds: 12, allowReplay: true, key: "pineapple" },
   { id: "name_3", type: "speak", domain: "Naming", max: 1, scoredBy: "ai_speech",
-    text: "What is this called?", say: "What is this called?", emoji: "🦚",
-    maxSeconds: 12, allowReplay: true, key: "peacock (also accept: peafowl, peahen)" },
+    text: "What is this called?", say: "What is this called?", emoji: "🐢",
+    maxSeconds: 12, allowReplay: true, key: "turtle (also accept: tortoise)" },
 
   // ---- Attention (6): longer forward digit spans, visual letter tap, serial 7s from 80 ----
   { id: "digits_6", type: "speak", domain: "Attention", max: 1, scoredBy: "ai_speech",
@@ -207,15 +202,11 @@ const STEPS = [
     text: "How are a POEM and a PAINTING alike?", say: "How are a poem and a painting alike?",
     maxSeconds: 20, allowReplay: true, key: "both are art / works of art / creative expression" },
 
-  // ---- Delayed memory (5) + recognition (0 points, research variable) ----
+  // ---- Delayed memory (5) ----
   { id: "recall", type: "speak", domain: "Delayed memory", max: 5, scoredBy: "ai_speech",
     text: "Earlier you heard 5 words.\nSay all the words you remember.",
     say: "Earlier, I said five words. Please say all the words you remember.",
     maxSeconds: 30, allowReplay: false, key: WORDS.join(", ") },
-  { id: "recognize", type: "recognize", domain: "Delayed memory", max: 0, scoredBy: "app_logic",
-    words: RECOGNITION, targets: WORDS,
-    text: "Tap every word that was in the list of 5 words.\nThen tap Done.",
-    say: "Here are some words. Tap every word that was in the list of five words from earlier. Then tap Done." },
 
   { id: "end", type: "end", max: 0, scoredBy: "none",
     text: "All done — thank you!\nPlease hand the tablet back.",

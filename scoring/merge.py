@@ -112,8 +112,7 @@ def main() -> None:
         return num(r.get("raw_count", r.get("raw_count_if_fluency")))
     flu_ai = {c: raw(ai, c, "fluency") for c in meta}
     flu_h = {c: raw(human, c, "fluency") for c in meta}
-    learn = {(c, k, src_name): raw(src, c, item) for c in meta for k, item in (("1", "learn_1"), ("2", "learn_2"))
-             for src_name, src in (("ai", ai), ("human", human))}
+    learn = {(c, kind): raw(src, c, "learn_1") for c in meta for kind, src in (("ai", ai), ("human", human))}
     recall_ai = {c: num(ai.get((c, "recall"), {}).get("ai_score")) for c in meta}
     recall_h = {c: num(human.get((c, "recall"), {}).get("score")) for c in meta}
     sf_ai, sf_h = speed_fluency(flu_ai, recall_ai, trail_sec), speed_fluency(flu_h, recall_h, trail_sec)
@@ -133,15 +132,13 @@ def main() -> None:
                     "fluency_count_ai": fmt(flu_ai.get(code)) if flu_ai.get(code) is not None else "",
                     "fluency_count_human": fmt(flu_h.get(code)) if flu_h.get(code) is not None else "",
                     "speed_fluency_ai": sf_ai.get(code, ""), "speed_fluency_human": sf_h.get(code, "")})
-        for kind in ("ai", "human"):
-            l1, l2 = learn.get((code, "1", kind)), learn.get((code, "2", kind))
-            row[f"learn_1_words_{kind}"] = fmt(l1) if l1 is not None else ""
-            row[f"learn_2_words_{kind}"] = fmt(l2) if l2 is not None else ""
-            row[f"learning_total_{kind}"] = fmt(l1 + l2) if l1 is not None and l2 is not None else ""
+        for kind in ("ai", "human"):  # words repeated right after hearing the list once (immediate recall)
+            l1 = learn.get((code, kind))
+            row[f"learn_words_{kind}"] = fmt(l1) if l1 is not None else ""
         timing_keys = [k for k in m if k.startswith(("latency_", "time_", "speech_latency"))]
         for k in ("trail_seconds", "trail_errors", "trail_first_tap_s", "letters_misses", "letters_false_taps",
                   "letters_lure_taps", "letters_mean_rt_ms", "rotate_correct", "rotate_mean_rt_s", "copy_box_draw_s",
-                  "recognition_hits", "recognition_false_alarms", "recognition_score", *timing_keys,
+                  *timing_keys,
                   "app_minutes", "replays_total",
                   "slums_status", "slums_minutes", "break_minutes", "corrections_total", "redo_count",
                   "skipped_count", "pauses_total", "mic_check", "retest"):

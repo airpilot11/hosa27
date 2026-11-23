@@ -378,7 +378,7 @@
   }
   function flagNext(stepId, flag) { (pendingFlags[stepId] = pendingFlags[stepId] || []).push(flag); }
   // items where repeating gives extra exposure to material that must be remembered
-  const isMemorySensitive = (step) => !!step && (!step.allowReplay && step.type === "speak" || step.id === "recall" || step.id === "recognize" || step.id.startsWith("learn"));
+  const isMemorySensitive = (step) => !!step && (!step.allowReplay && step.type === "speak" || step.id === "recall" || step.id.startsWith("learn"));
   function lockPause(on) { const b = $("pauseBtn"); if (b) { b.disabled = on; b.style.opacity = on ? 0.35 : 1; } }
 
   // =====================================================================
@@ -835,7 +835,6 @@
     if (it.latencyMs != null) b.push(`started answering after ${(it.latencyMs / 1000).toFixed(1)} s`);
     if (it.rtMs != null) b.push(`${it.correct ? "correct" : "wrong"} in ${(it.rtMs / 1000).toFixed(1)} s`);
     if (it.meanHitRtMs != null) b.push(`mean reaction ${it.meanHitRtMs} ms`);
-    if (it.recognitionScore != null) b.push(`recognition ${it.recognitionScore}`);
     if (it.replays) b.push(`replayed ${it.replays}×`);
     if (it.voiceDetected === false) b.push("no speech detected");
     if (it.error) b.push(`⚠️ ${it.error}`);
@@ -894,7 +893,7 @@
       "step_id", "domain", "max_points", "saved", "auto_score", "recording_seconds", "has_audio", "has_drawing",
       "duration_seconds", "errors", "hits", "misses", "false_taps", "replays", "stop_reason", "staff_help_on_step",
       "attempt", "skipped", "voice_detected", "flags",
-      "latency_seconds", "speech_end_seconds", "response_seconds", "total_seconds", "rt_seconds", "correct", "mean_hit_rt_ms", "recognition_score"];
+      "latency_seconds", "speech_end_seconds", "response_seconds", "total_seconds", "rt_seconds", "correct", "mean_hit_rt_ms"];
     const q = (v) => { const t = v === undefined || v === null ? "" : String(v); return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
     const sec = (ms) => (ms === undefined || ms === null ? "" : (ms / 1000).toFixed(2));
     const lines = [cols.join(",")];
@@ -912,7 +911,7 @@
           it.falseAlarms ?? "", it.replays ?? "", it.stopReason ?? "", help,
           it.attempt ?? "", it.skipped ? "yes" : "", it.voiceDetected === undefined ? "" : it.voiceDetected ? "yes" : "no", (it.flags || []).join("; "),
           sec(it.latencyMs), sec(it.speechEndMs), sec(it.responseMs ?? it.drawMs), sec(it.totalMs), sec(it.rtMs),
-          it.correct === undefined ? "" : it.correct ? "yes" : "no", it.meanHitRtMs ?? "", it.recognitionScore ?? ""].map(q).join(","));
+          it.correct === undefined ? "" : it.correct ? "yes" : "no", it.meanHitRtMs ?? ""].map(q).join(","));
       }
     }
     const file = new File([lines.join("\n")], `hosa27_summary_${localDateInfo().localDate}.csv`, { type: "text/csv" });
@@ -1056,7 +1055,6 @@
       if (st.type === "trail" && !it.completed) out.push({ st, why: "connect-the-dots not finished in time" });
       if (st.type === "draw" && (it.strokes || 0) < 3) out.push({ st, why: "very little drawing" });
       if (st.type === "rotate" && it.stopReason === "time_limit") out.push({ st, why: "no answer tapped in time" });
-      if (st.type === "recognize" && !(it.chosen || []).length) out.push({ st, why: "no words tapped" });
     }
     return out;
   }
@@ -1152,7 +1150,8 @@
       <footer class="pfoot">${esc(STUDY.footer)}</footer>
     </div>`;
   }
-  const chip = (step) => (step.domain ? `<span class="chip">${esc(DOMAIN_LABELS[step.domain] || step.domain)}</span>` : "");
+  // No topic label (e.g. "Memory") on participant screens: it can change how people answer.
+  const chip = () => "";
   function wirePause() { const b = $("pauseBtn"); if (b) b.onclick = pauseNow; }
 
   // "Pause / I need a break": stops the current question; Continue restarts it from the beginning.
@@ -1189,7 +1188,7 @@
     if (!step) return finishSession();
     renderToolbar();
     prefetchStep(STEPS[stepIndex + 1]);
-    const runners = { intro: introStep, speak: speakStep, trail: trailStep, draw: drawStep, rotate: rotateStep, vigilance: vigilanceStep, recognize: recognizeStep, end: endStep };
+    const runners = { intro: introStep, speak: speakStep, trail: trailStep, draw: drawStep, rotate_intro: rotateIntroStep, rotate: rotateStep, vigilance: vigilanceStep, end: endStep };
     (runners[step.type] || next)(step);
     window.scrollTo(0, 0);
   }
@@ -1424,6 +1423,39 @@
     const rects = cells.map(([x, y]) => `<rect x="${x}" y="${y}" width="1.02" height="1.02"/>`).join("");
     return `<svg viewBox="${cx - 2} ${cy - 2} 4 4" class="shape-svg" aria-hidden="true"><g transform="rotate(${rot} ${cx} ${cy}) translate(${cx} ${cy}) scale(${mirror ? -1 : 1} 1) translate(${-cx} ${-cy})">${rects}</g></svg>`;
   }
+  const practiceRetried = {};
+  // small reminder that stays on screen during every shape question
+  function rotLegend() {
+    const L = SHAPES.L;
+    return `<div class="rot-legend" aria-hidden="true">
+      <span class="ok"><i>${shapeSVG(L)}</i>→<i>${shapeSVG(L, 90)}</i><b>✓ Turned = same</b></span>
+      <span class="no"><i>${shapeSVG(L)}</i>→<i>${shapeSVG(L, 0, true)}</i><b>✗ Flipped = not the same</b></span></div>`;
+  }
+  // how-it-works screen: one shape keeps turning (same), one keeps flipping like a mirror (not the same)
+  function rotateIntroStep(step) {
+    const item = itemBase(step); const cells = SHAPES[step.shape];
+    $app.innerHTML = shell(`
+      <h2 class="prompt">${esc(step.text)}</h2>
+      <div class="caption" id="cap" aria-live="polite"></div>
+      <div class="rot-demo">
+        <div class="demo-card ok"><div class="demo-shape"><div class="spin">${shapeSVG(cells)}</div></div>
+          <b>✓ Turned</b><span>Still the SAME shape</span></div>
+        <div class="demo-card no"><div class="demo-shape mirror-line"><div class="flip">${shapeSVG(cells)}</div></div>
+          <b>✗ Flipped</b><span>Like a mirror — NOT the same</span></div>
+      </div>
+      <div class="row">
+        <button class="btn-ghost" id="replay">${ICON.replay} Hear it again</button>
+        <button class="btn-primary" id="go" disabled>Continue ${ICON.play}</button>
+      </div>`);
+    wirePause();
+    let done = false; abortStep = () => { done = true; stopSpeech(); };
+    const go = $("go");
+    const play = () => playInstruction(step).then(() => { if (!done) go.disabled = false; });
+    $("replay").onclick = () => { item.replays += 1; stopSpeech(); play(); };
+    setTimeout(() => (go.disabled = false), R.on ? 300 : 15000); // never stuck if the audio fails
+    go.onclick = async () => { if (done) return; done = true; stopSpeech(); await storeItem(item); next(); };
+    play();
+  }
   function rotateStep(step) {
     const item = itemBase(step);
     const cells = SHAPES[step.shape]; const correctIdx = step.choices.findIndex((c) => !c.mirror);
@@ -1431,6 +1463,7 @@
       ${chip(step)}
       <h2 class="prompt">${esc(step.text)}</h2>
       <div class="caption" id="cap" aria-live="polite"></div>
+      ${rotLegend()}
       <div class="rot-target">${shapeSVG(cells)}</div>
       <div class="rot-choices">${step.choices.map((c, i) =>
         `<button class="rot-choice" data-i="${i}" disabled aria-label="choice ${i + 1}">${shapeSVG(cells, c.rot, c.mirror)}</button>`).join("")}</div>
@@ -1448,8 +1481,12 @@
       if (step.practice) { // show the right answer so everyone understands the task before it counts
         btns[correctIdx].classList.add("right");
         if (i !== null && !item.correct) btns[i].classList.add("wrong");
-        $status.textContent = item.correct ? "Yes! That is the same shape, just turned." : "This one (green) is the same shape, just turned. The others are flipped.";
-        await sleep(R.on && R.short ? 600 : 4500); if (cancelled) return;
+        const retry = !item.correct && !practiceRetried[step.id];
+        $status.textContent = item.correct ? "Yes! That is the same shape, just turned."
+          : `The green one is the same shape, just turned. The others are flipped.${retry ? " Let's try once more." : ""}`;
+        await sleep(R.on && R.short ? 600 : 5000); if (cancelled) return;
+        if (retry) { practiceRetried[step.id] = true; item.retried = true; await storeItem(item); return runStep(); } // one more practice
+        delete practiceRetried[step.id];
       }
       await storeItem(item); await thanks(); if (STEPS[stepIndex] === step) next();
     };
@@ -1459,38 +1496,6 @@
       btns.forEach((b) => (b.disabled = false)); t0 = now(); item.instructionMs = Math.round(t0 - item._t0);
       $status.textContent = "Tap your answer";
       timer = setTimeout(() => finish(null, "time_limit"), (R.on && R.short ? 8 : (step.timeLimitSec || 60)) * 1000);
-    });
-  }
-
-  // --- word recognition: tap the words that were in the list
-  function recognizeStep(step) {
-    const item = itemBase(step); item.selections = [];
-    $app.innerHTML = shell(`
-      ${chip(step)}
-      <h2 class="prompt">${esc(step.text)}</h2>
-      <div class="caption" id="cap" aria-live="polite"></div>
-      <div class="word-grid">${step.words.map((w, i) => `<button class="word-btn" data-i="${i}" aria-pressed="false" disabled>${esc(w)}</button>`).join("")}</div>
-      <button class="btn-primary" id="done" disabled>${ICON.check} Done</button>`);
-    wirePause();
-    const btns = [...document.querySelectorAll(".word-btn")];
-    let t0 = null, finished = false; abortStep = () => { finished = true; stopSpeech(); };
-    btns.forEach((b) => b.addEventListener("click", () => {
-      if (t0 === null || finished) return;
-      const on = !b.classList.contains("on"); b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on));
-      item.selections.push({ word: step.words[Number(b.dataset.i)], on, t: Math.round(now() - t0) });
-    }));
-    $("done").onclick = async () => {
-      if (t0 === null || finished) return; finished = true;
-      const chosen = btns.filter((b) => b.classList.contains("on")).map((b) => step.words[Number(b.dataset.i)]);
-      item.chosen = chosen; item.hits = chosen.filter((w) => step.targets.includes(w)).length;
-      item.falseAlarms = chosen.length - item.hits; item.misses = step.targets.length - item.hits;
-      item.recognitionScore = item.hits - item.falseAlarms; // -5..5
-      item.responseMs = Math.round(now() - t0); item.appScore = null;
-      await storeItem(item); await thanks(); if (STEPS[stepIndex] === step) next();
-    };
-    playInstruction(step).then(() => {
-      if (finished) return;
-      btns.forEach((b) => (b.disabled = false)); $("done").disabled = false; t0 = now(); item.instructionMs = Math.round(t0 - item._t0);
     });
   }
 

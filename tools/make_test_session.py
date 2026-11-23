@@ -27,8 +27,8 @@ now = datetime.now()
 answers = {  # what the fake participant "says"
     "orient_day": now.strftime("%A"), "orient_date": f"It is the {now.day}th", "orient_month": now.strftime("%B"),
     "orient_year": "twenty twenty five, no wait, twenty twenty six", "orient_place": "the test center", "orient_city": "Atlanta",
-    "learn_1": "river, candle, and garden", "learn_2": "river, candle, jacket, garden",
-    "name_1": "an hourglass", "name_2": "an accordion", "name_3": "um, a fancy bird?",
+    "learn_1": "river, candle, and garden",
+    "name_1": "an anchor", "name_2": "a pineapple", "name_3": "um, a frog?",
     "digits_6": "7 2 8 5 1 6", "digits_7": "3 9 4 8 1 6 2", "serial7": "73, 66, 58, 51, 44",
     "sentence_1": "The woman who lives next to the bakery walks her two dogs every evening.",
     "sentence_2": "Before the storm, the farmer locked the barn and counted his sheep.",
@@ -63,9 +63,7 @@ for st in steps:
         it.update(choice=1 if ok else 0, correct=ok, rtMs=7400 if ok else 12900, appScore=1 if ok else 0, stopReason="tapped")
     elif st["id"] == "letters":
         it.update(hits=8, misses=0, falseAlarms=1, lureTaps=1, meanHitRtMs=640, appScore=1)
-    elif st["id"] == "recognize":
-        it.update(chosen=["river", "candle", "jacket", "garden", "guitar"], hits=4, falseAlarms=1, misses=1,
-                  recognitionScore=3, responseMs=14500)
+
     items[st["id"]] = it
 
 session = {

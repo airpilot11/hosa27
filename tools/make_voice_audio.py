@@ -9,11 +9,11 @@ Two ways to make it:
      2. python3 tools/make_voice_audio.py                 (picks the best installed voice automatically)
         python3 tools/make_voice_audio.py --voice "Zoe (Premium)" --rate 135
 
-  B) Your OWN recorded voice (most natural)
+  B) A real person's voice (clearest - recommended for older adults)
      1. python3 tools/make_voice_audio.py --script-only   -> writes app/audio/RECORDING_SCRIPT.md
-     2. Record each line (Voice Memos / QuickTime), save as the listed file name (e.g. orient_day.m4a)
-        into app/audio/own/
-     3. python3 tools/make_voice_audio.py --own           (your files are used; any missing line uses a Mac voice)
+     2. Record each SHORT line (one sentence, one word or one number) with Voice Memos / QuickTime and save it
+        with the listed file name (e.g. welcome__p0.m4a) into app/audio/own/
+     3. python3 tools/make_voice_audio.py --own           (your files are used; any missing line uses the Mac voice)
 
 Other:  --list-voices   show installed English voices
         --remove        delete the pack (go back to the iPad's built-in voice)
@@ -69,33 +69,39 @@ def split_sentences(text):
     return [x.strip() for x in re.findall(r"[^.!?]+[.!?]*\s*", text or "") if x.strip()]
 
 
-def step_text(step, silence=True):
-    """Text spoken for one step: the instruction, then any words/digits/sentence with pauses."""
-    text = step.get("say", "")
-    seq = step.get("sequence")
-    if seq:
-        gap = max(300, int(step.get("sequenceGapMs", 1000)) - 350)
-        if silence:
-            text += " [[slnc 700]] " + f" [[slnc {gap}]] ".join(seq)
-        else:
-            text += "  (pause)  " + "  (pause 1 second)  ".join(seq)
-    return text
+def clear_speech(text):
+    """Short pauses at commas/semicolons so phrases don't run together."""
+    return re.sub(r"([,;:])\s+", r"\1 [[slnc 250]] ", text)
 
 
 def say_to_file(text, out, voice, rate):
-    subprocess.run(["say", "-v", voice, "-r", str(rate), "-o", str(out),
-                    "--file-format=m4af", "--data-format=aac", text], check=True)
+    """Render with the Mac voice, then encode at good quality (44.1 kHz, 96 kbps AAC). The old direct
+    `say -o x.m4a` output was 22 kHz / ~35 kbps, which made consonants sound muffled."""
+    tmp = Path(str(out) + ".aiff")
+    subprocess.run(["say", "-v", voice, "-r", str(rate), "-o", str(tmp), clear_speech(text)], check=True)
+    encode(tmp, out)
+    tmp.unlink()
+
+
+def encode(src, out):
+    subprocess.run(["afconvert", "-f", "m4af", "-d", "aac@44100", "-b", "96000", str(src), str(out)], check=True)
 
 
 def write_script(data):
     lines = ["# hosa27 voice recording script", "",
-             "Record each line in a quiet room, at a calm, slightly slow pace, in a friendly voice.",
-             "Save each recording with the exact file name into `app/audio/own/` (`.m4a` from Voice Memos is fine).",
-             "Where it says (pause 1 second), pause for about one second between items.", "",
+             "One person records every line, in a quiet room, phone 20-30 cm from the mouth.",
+             "Speak slowly and clearly, pronouncing every consonant, in a calm, friendly voice. Leave a short",
+             "silence before and after each line. Each line is ONE sentence, word or number, so a mistake only",
+             "means re-recording that line.",
+             "Save each recording with the exact file name into `app/audio/own/` (`.m4a` from Voice Memos is fine).", "",
              "| File name | Say exactly |", "|---|---|"]
     for st in data["steps"]:
-        if st.get("say"):
-            lines.append(f"| `{st['id']}.m4a` | {step_text(st, silence=False)} |")
+        if not st.get("say"):
+            continue
+        for n, sentence in enumerate(split_sentences(st["say"])):
+            lines.append(f"| `{st['id']}__p{n}.m4a` | {sentence} |")
+        for n, item in enumerate(st.get("sequence") or []):
+            lines.append(f"| `{st['id']}__q{n}.m4a` | {item} |")
     (AUDIO / "RECORDING_SCRIPT.md").write_text("\n".join(lines) + "\n")
     print("wrote", AUDIO / "RECORDING_SCRIPT.md")
 
@@ -145,34 +151,32 @@ def main():
     for f in AUDIO.glob("*.m4a"):
         f.unlink()
     rec, letters, files, own_used = {}, {}, [], 0
+
+    def make(name, text):
+        """One audio file: the person's recording from app/audio/own/ if present, otherwise the Mac voice."""
+        nonlocal own_used
+        own = OWN / name
+        if args.own and own.exists():
+            encode(own, AUDIO / name); own_used += 1
+        else:
+            say_to_file(text, AUDIO / name, voice, args.rate)
+        files.append(name)
+        return f"audio/{name}"
+
     for st in data["steps"]:
         if not st.get("say"):
             continue
-        own_file = OWN / f"{st['id']}.m4a"
-        if args.own and own_file.exists():
-            # your own single recording of the whole step (instruction + any list, as in RECORDING_SCRIPT.md)
-            rec[st["id"]] = {"src": f"audio/own/{own_file.name}", "includesSequence": True, "own": True}
-            files.append(f"own/{own_file.name}"); own_used += 1
-        else:
-            parts = []
-            for n, sentence in enumerate(split_sentences(st["say"])):
-                name = f"{st['id']}__p{n}.m4a"
-                say_to_file(sentence, AUDIO / name, voice, args.rate)
-                parts.append({"text": sentence, "src": f"audio/{name}"}); files.append(name)
-            entry = {"parts": parts}
-            if st.get("sequence"):
-                seq = []
-                for n, item in enumerate(st["sequence"]):
-                    name = f"{st['id']}__q{n}.m4a"
-                    say_to_file(item, AUDIO / name, voice, args.rate)
-                    seq.append(f"audio/{name}"); files.append(name)
-                entry["seq"] = seq
-                # the gap after each item; item audio itself lasts ~0.4-0.6 s
-                entry["seqGapMs"] = max(250, int(st.get("sequenceGapMs", 1000)) - 450)
-            rec[st["id"]] = entry
+        parts = [{"text": sentence, "src": make(f"{st['id']}__p{n}.m4a", sentence)}
+                 for n, sentence in enumerate(split_sentences(st["say"]))]
+        entry = {"parts": parts}
+        if st.get("sequence"):
+            entry["seq"] = [make(f"{st['id']}__q{n}.m4a", item) for n, item in enumerate(st["sequence"])]
+            # the gap after each item; item audio itself lasts ~0.4-0.6 s
+            entry["seqGapMs"] = max(250, int(st.get("sequenceGapMs", 1000)) - 450)
+        rec[st["id"]] = entry
         print(f"  ✓ {st['id']}")
     # (no letter files: since v0.6.0 the letter-tap task shows the letters on screen instead of speaking them)
-    info = {"voice": (f"own recordings ({own_used} files) + {voice}" if args.own else voice),
+    info = {"voice": (f"recorded voice ({own_used} of {len(files)} files) + {voice}" if args.own else voice),
             "rate": args.rate, "created": datetime.now().isoformat(timespec="seconds")}
     write_manifest(rec, letters, info, files)
     print(f"\nVoice pack ready: {len(rec)} instructions ({len(files)} audio files) ({info['voice']}).")
