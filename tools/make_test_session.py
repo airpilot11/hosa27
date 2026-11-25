@@ -29,7 +29,7 @@ answers = {  # what the fake participant "says"
     "orient_placecity": "the test center, in Atlanta",
     "learn_1": "peach, grape, and lemon",
     "learn_2": "peach, grape, cherry, lemon",
-    "naming": "an anchor, a guitar, and um, a frog?",
+    "naming": "a key, scissors, and um, a parasol?",
     "digits_4": "5 8 2 6", "digits_5": "4 1 3 7 9", "serial7": "93, 86, 78, 71, 64",
     "sentence_1": "The children played in the park after lunch.",
     "sentence_2": "My sister brings flowers when she visits.",

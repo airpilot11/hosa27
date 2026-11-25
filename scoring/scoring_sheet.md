@@ -1,4 +1,4 @@
-# hosa27 App Scoring Sheet (DRAFT v0.6 (app v0.10.2 items), FREEZE BY DEC 4, 2026)
+# hosa27 App Scoring Sheet (DRAFT v0.7 (app v0.10.3 items), FREEZE BY DEC 4, 2026)
 
 Human scorers and the AI use this exact sheet. Total = 30 points, in the same 8 areas and with the same point values as the MoCA. Do not change it after real data collection starts.
 Record the date you froze it here: ________
@@ -28,8 +28,8 @@ Score each part separately and add them.
 - **rotate_1, rotate_2** (1 each, scored automatically by the app): 3 choices per puzzle. 1 if the first tap is the shape that is the same as the top shape, just turned; 0 if a flipped (mirror) shape is tapped or there is no answer within 60 s. (Not on the human sheet.)
 
 ## Naming (1 recording, 3 pictures, 1 point each = 0–3)
-- **naming**: 1. anchor, 2. guitar, 3. turtle (also accept "tortoise"). Any order is fine; 1 point for each correct name.
-- A general category or description ("a boat thing", "a fruit", "an animal") = 0.
+- **naming**: 1. key (also accept "keys"), 2. scissors (also accept "shears"), 3. umbrella. Any order is fine; 1 point for each correct name.
+- A general category or description ("something to cut with", "a rain thing", "a tool") = 0.
 
 ## Attention (6 points)
 - **digits_4** (1): exact sequence **5 8 2 6**, same order, nothing missing or added.

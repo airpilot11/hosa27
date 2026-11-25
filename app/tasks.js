@@ -6,7 +6,7 @@
 // collection starts. The version number is saved into every session.
 // =====================================================================
 
-const HOSA27_VERSION = "0.10.2";
+const HOSA27_VERSION = "0.10.3";
 
 // What participants see (header, welcome screen, footer). Edit freely.
 const STUDY = {
@@ -183,13 +183,14 @@ const STEPS = [
     text: "Which shape is the SAME as the top one, just turned?",
     say: "One more puzzle. Tap Start when you are ready." },
 
-  // ---- Naming (3): 3 common objects on ONE screen, as in the MoCA (no fruit, so it can't mix with the memory list) ----
+  // ---- Naming (3): 3 everyday objects everyone knows, on ONE screen, as in the MoCA (v0.10.3: key, scissors,
+  //      umbrella instead of anchor, guitar, turtle). Not fruit (memory list), not a car (abstraction) or pen (SLUMS). ----
   { id: "naming", type: "speak", domain: "Naming", max: 3, scoredBy: "ai_speech",
-    text: "What are these 3 things called?", emoji: ["⚓", "🎸", "🐢"],
+    text: "What are these 3 things called?", emoji: ["🔑", "✂️", "☂️"],
     say: "Look at the three pictures. Say what each one is called, starting with number one. Tap Start, and then say your answers.",
     howTo: ["Look at the 3 pictures.", "Tap the green START button.", "Say what each one is called: 1, then 2, then 3.", "Tap I'M DONE."],
     maxSeconds: 25, allowReplay: true,
-    key: "1. anchor (1 point); 2. guitar (1 point); 3. turtle, also accept tortoise (1 point). Any order is fine." },
+    key: "1. key, also accept keys (1 point); 2. scissors, also accept shears (1 point); 3. umbrella (1 point). Any order is fine." },
 
   // ---- Attention (6): short forward number lists (4 and 5 numbers), letter tap, serial 7s from 100 (MoCA) ----
   { id: "digits_4", type: "speak", domain: "Attention", max: 1, scoredBy: "ai_speech",
