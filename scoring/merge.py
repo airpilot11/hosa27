@@ -113,7 +113,7 @@ def main() -> None:
     flu_ai = {c: raw(ai, c, "fluency") for c in meta}
     flu_h = {c: raw(human, c, "fluency") for c in meta}
     counts = {(c, kind, item): raw(src, c, item) for c in meta for kind, src in (("ai", ai), ("human", human))
-              for item in ("learn_1", "learn_2", "recall_cued")}
+              for item in ("learn_1", "learn_2")}
     recall_ai = {c: num(ai.get((c, "recall"), {}).get("ai_score")) for c in meta}
     recall_h = {c: num(human.get((c, "recall"), {}).get("score")) for c in meta}
     sf_ai, sf_h = speed_fluency(flu_ai, recall_ai, trail_sec), speed_fluency(flu_h, recall_h, trail_sec)
@@ -139,8 +139,8 @@ def main() -> None:
         for kind in ("ai", "human"):
             tot = row[f"app_total_{kind}"]
             row[f"app_total_{kind}_edu_adj"] = "" if tot == "" or edu is None else fmt(min(30, tot + (1 if edu <= 12 else 0)))
-        for kind in ("ai", "human"):  # list words said after hearing the list once / twice, and with category hints
-            for item, col in (("learn_1", "learn_words_1"), ("learn_2", "learn_words_2"), ("recall_cued", "cued_recall_words")):
+        for kind in ("ai", "human"):  # list words said after hearing the list once / twice (hint round removed in v0.10.0)
+            for item, col in (("learn_1", "learn_words_1"), ("learn_2", "learn_words_2")):
                 v = counts.get((code, kind, item))
                 row[f"{col}_{kind}"] = fmt(v) if v is not None else ""
         timing_keys = [k for k in m if k.startswith(("latency_", "time_", "speech_latency", "start_tap"))]

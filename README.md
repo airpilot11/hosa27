@@ -27,7 +27,7 @@ Open **http://localhost:8027/?researcher=1**, or tick **🔧 Researcher mode** o
 | Button | What it does |
 |---|---|
 | ◀ Back / Skip ▶ | Go to the previous or next step |
-| Step menu | Jump straight to any of the 31 steps (points shown) |
+| Step menu | Jump straight to any of the 27 steps (points shown) |
 | 🔊 Voice | normal → fast → mute |
 | ⏱ Timers | real → short (recordings stop after 4 s, the word-fluency timer after 6 s, the trail after 20 s, shape questions after 8 s) |
 | 📋 Saved data | See what has been saved so far (audio length, drawing, automatic scores) |
@@ -43,7 +43,7 @@ Practice runs are marked as practice and the scoring tools ignore them. The micr
 ### Voice (less robotic)
 The app plays a **voice pack** (one audio file per instruction) when there is one. Otherwise it uses the device's built-in voice. A voice pack sounds more natural, and every participant hears the identical recording, which is better standardization for your Methods section.
 
-- **Option A: Mac voice (current).** The pack uses **Ava (Enhanced)** at 135 words per minute, with short pauses at commas, saved at 44.1 kHz / 96 kbps (the old 22 kHz / 35 kbps files sounded muffled). Ava's own quality is limited, so some words can still sound slurred. Rebuild after changing any `say` text:
+- **Option A: Mac voice (current).** The pack uses **Ava (Enhanced)**, slowed to **80% speed without changing the pitch** (`--speed 0.8`, done by `tools/slow_audio.swift`, because Enhanced voices ignore the speed setting), with pauses at commas, saved at 44.1 kHz / 96 kbps (the old 22 kHz / 35 kbps files sounded muffled). Ava's own quality is limited, so some words can still sound slurred. Rebuild after changing any `say` text:
   ```bash
   python3 tools/make_voice_audio.py
   ```
@@ -118,26 +118,28 @@ Participants never see a score.
 
 All corrections appear in **View** (corrections log), the summary CSV and `final_dataset.csv` (corrections_total, redo_count, skipped_count, pauses_total, mic_check, retest). They give you the numbers you need for the Methods section and any decisions about excluding data.
 
-## Item set and research variables (app v0.9.0)
+## Item set and research variables (app v0.10.0)
 
 **How every question works (v0.9.0):** the instructions play first (with subtitles), and a **"What to do" panel lists the steps on screen for the whole question** (beside the question in landscape, above it in portrait), so participants never have to memorize instructions. Then a big green **START** button appears, with **Hear the instructions again**. Nothing is played, shown or timed until the participant taps START: the words / numbers / sentence to remember play *after* START, the trail circles and drawing pad unlock, the shape choices appear, the letters begin. Then a chime and **SPEAK NOW** for spoken answers.
+
+**v0.10.0 (shorter, 15 minutes max):** 25 questions instead of 29. Orientation is asked in 3 screens with 2 questions each, the hint round after recall is gone, the letter task is 20 letters (~40 s), and the spoken instructions are shorter but **about 20% slower** (the steps stay on screen). The 5 memory words are now **all fruits** and each one is **shown on screen while it is spoken**. Still 30 points in the same 8 areas.
 
 No topic labels (e.g. "Memory") are shown to participants. **Same 8 areas and point values as the MoCA, 30 points**, made easier and closer to the MoCA than v0.8 (which had harder items and produced unusually low scores). Items still avoid the paper SLUMS (no clock, animal naming, money math, backward digits, story or SLUMS words).
 
 | Area (points) | Items | MoCA equivalent |
 |---|---|---|
-| Orientation (6) | day, date, month, year, place, city | same |
+| Orientation (6) | day + date, month + year, place + city (3 screens, 2 questions each, 1 pt per question) | same |
 | Executive (2) | trail with **10 circles**, 1-A-2-B … 5-E (practice first); 1 pt finished in order + 1 pt if ≤1 wrong tap | same 10-circle trail |
 | Visuospatial (3) | copy a 3-D box (1, AI-scored) + 2 shape puzzles with **3 choices** (1 each), after a how-it-works screen and a practice | cube (1) + clock (3; clock is in the SLUMS) |
-| Naming (3) | anchor, pineapple, turtle | lion, rhino, camel |
-| Attention (6) | **4 and 5** numbers in the same order (1 each), tap for every **A** (no look-alike letters) (1), serial 7s **from 100** (3) | 5 forward + 3 backward, tap for A, serial 7s from 100 |
-| Language (3) | two **short 8-word sentences, played slowly** (~95 words/min) (1 each), P words in 1 minute (1; 11+) | 2 sentences, F words (11+) |
-| Abstraction (2) | car–airplane, clock–calendar, after the example "an orange and a banana are both fruit" | train–bicycle, watch–ruler, same example |
-| Delayed memory (5) | **hand, shirt, school, rose, blue**: one word from each category (body part, clothing, building, flower, color), the categories are named before the list, and the list is **read twice** | face, velvet, church, daisy, red; read twice |
+| Naming (3) | anchor, guitar, turtle | lion, rhino, camel |
+| Attention (6) | **4 and 5** numbers in the same order (1 each), tap for every **A** (20 letters, no look-alike letters) (1), serial 7s **from 100** (3) | 5 forward + 3 backward, tap for A, serial 7s from 100 |
+| Language (3) | two **short 8-word sentences, played slowly** (~85 words/min) (1 each), P words in 1 minute (1; 11+) | 2 sentences, F words (11+) |
+| Abstraction (2) | car–airplane, clock–calendar, after the example "a hammer and a saw are both tools" (not fruit, so it can't mix with the memory list) | train–bicycle, watch–ruler, banana–orange example |
+| Delayed memory (5) | **peach, grape, cherry, lemon, mango**: all from **one category (fruit)**, each word **shown on screen while spoken**, the list is **read twice**, no hint round | face, velvet, church, daisy, red; read twice |
 
 **Education adjustment:** as in the MoCA, `merge.py` adds 1 point (max 30) for 12 or fewer years of school (`app_total_ai_edu_adj`, `app_total_human_edu_adj`). Years of school come from the staff setup screen.
 
-**Research variables (not in the 30):** words said after the 1st and 2nd reading (`learn_words_1`, `learn_words_2`), words said after category hints at the end (`cued_recall_words`, like the MoCA memory index), P-word count, trail time and first-tap time, shape accuracy and time, box drawing time, letter-tap misses, false taps and mean reaction time.
+**Research variables (not in the 30):** words said after the 1st and 2nd reading (`learn_words_1`, `learn_words_2`), P-word count, trail time and first-tap time, shape accuracy and time, box drawing time, letter-tap misses, false taps and mean reaction time.
 
 **Timing variables (reaction time):** yes, every item is timed. In the summary CSV, **`reaction_time_seconds`** is one reaction time per item, measured from when the participant could start answering: spoken items = from the chime / SPEAK NOW to the first sound lasting ≥150 ms (approximate in noisy rooms); shapes = choices shown → tap; trail = START → first circle; drawing = START → first line; letters = mean time from each A appearing → tap. **`start_tap_seconds`** = how long after the instructions ended the participant tapped START (readiness). Also saved: `latency_seconds`, `speech_end_seconds`, `response_seconds`, `instruction_seconds`, `total_seconds`. `extract.py` writes one row per item to `item_timing.csv` and adds `speech_latency_mean_s`, `start_tap_mean_s`, `latency_<area>_s` and `time_<area>_s` per participant.
 

@@ -25,18 +25,18 @@ steps = json.loads(subprocess.run(["osascript", "-l", "JavaScript", "-e", jxa], 
 
 now = datetime.now()
 answers = {  # what the fake participant "says"
-    "orient_day": now.strftime("%A"), "orient_date": f"It is the {now.day}th", "orient_month": now.strftime("%B"),
-    "orient_year": "twenty twenty five, no wait, twenty twenty six", "orient_place": "the test center", "orient_city": "Atlanta",
-    "learn_1": "hand, shirt, and rose",
-    "learn_2": "hand, shirt, school, rose",
-    "name_1": "an anchor", "name_2": "a pineapple", "name_3": "um, a frog?",
+    "orient_daydate": f"It's {now.strftime('%A')}, the {now.day}th",
+    "orient_monthyear": f"{now.strftime('%B')}, twenty twenty five, no wait, twenty twenty six",
+    "orient_placecity": "the test center, in Atlanta",
+    "learn_1": "peach, grape, and lemon",
+    "learn_2": "peach, grape, cherry, lemon",
+    "name_1": "an anchor", "name_2": "a guitar", "name_3": "um, a frog?",
     "digits_4": "5 8 2 6", "digits_5": "4 1 3 7 9", "serial7": "93, 86, 78, 71, 64",
     "sentence_1": "The children played in the park after lunch.",
     "sentence_2": "My sister brings flowers when she visits.",
     "fluency": "pen, pencil, paper, Paris, purple, pink, pickle, plant, planted, phone, pie, pear, pillow, pot",
     "abstract_1": "they are both ways to travel", "abstract_2": "they both have numbers",
-    "recall": "hand, rose, and I think red",
-    "recall_cued": "hand, shirt, school, rose, and red",
+    "recall": "peach, lemon, and I think banana",
 }
 
 

@@ -70,8 +70,20 @@ def split_sentences(text):
 
 
 def clear_speech(text):
-    """Short pauses at commas/semicolons so phrases don't run together."""
-    return re.sub(r"([,;:])\s+", r"\1 [[slnc 250]] ", text)
+    """Pauses at commas/semicolons so phrases don't run together (350 ms since v0.10.0; was 250)."""
+    return re.sub(r"([,;:])\s+", r"\1 [[slnc 350]] ", text)
+
+
+SLOW_SRC = ROOT / "tools" / "slow_audio.swift"
+SLOW_BIN = ROOT / "tools" / ".bin" / "slow_audio"
+
+
+def slow_tool():
+    """Compile tools/slow_audio.swift once (Apple's own time-stretch: slower speech, same pitch)."""
+    if not SLOW_BIN.exists() or SLOW_BIN.stat().st_mtime < SLOW_SRC.stat().st_mtime:
+        SLOW_BIN.parent.mkdir(exist_ok=True)
+        subprocess.run(["swiftc", "-O", str(SLOW_SRC), "-o", str(SLOW_BIN)], check=True)
+    return SLOW_BIN
 
 
 def slow_speech(text, wpm):
@@ -81,12 +93,17 @@ def slow_speech(text, wpm):
     return f" [[slnc {pause}]] ".join(text.split())
 
 
-def say_to_file(text, out, voice, rate, slow_wpm=None):
-    """Render with the Mac voice, then encode at good quality (44.1 kHz, 96 kbps AAC). The old direct
-    `say -o x.m4a` output was 22 kHz / ~35 kbps, which made consonants sound muffled."""
+def say_to_file(text, out, voice, rate, slow_wpm=None, speed=1.0):
+    """Render with the Mac voice, slow it down without changing the pitch (speed < 1), then encode at good
+    quality (44.1 kHz, 96 kbps AAC). Enhanced/Premium voices mostly ignore `say -r` (Ava at "-r 135" really
+    speaks ~155 words per minute), so the slowing is done afterwards with tools/slow_audio.swift."""
     tmp = Path(str(out) + ".aiff")
     spoken = slow_speech(text, slow_wpm) if slow_wpm else clear_speech(text)
     subprocess.run(["say", "-v", voice, "-r", str(rate), "-o", str(tmp), spoken], check=True)
+    if speed < 0.999:
+        slowed = Path(str(out) + ".slow.aiff")
+        subprocess.run([str(slow_tool()), str(tmp), str(slowed), str(speed)], check=True)
+        tmp.unlink(); tmp = slowed
     encode(tmp, out)
     tmp.unlink()
 
@@ -128,6 +145,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--voice", help='Mac voice name, e.g. "Ava (Premium)" (default: best installed)')
     ap.add_argument("--rate", type=int, default=135, help="words per minute (default 135 = calm and slow; normal speech ~175)")
+    ap.add_argument("--speed", type=float, default=0.8,
+                    help="slow the Mac voice to this fraction of its speed, same pitch (default 0.8 = about 125 words per minute)")
     ap.add_argument("--own", action="store_true", help="use your own recordings from app/audio/own/")
     ap.add_argument("--script-only", action="store_true", help="only write the recording script")
     ap.add_argument("--list-voices", action="store_true")
@@ -168,7 +187,7 @@ def main():
         if args.own and own.exists():
             encode(own, AUDIO / name); own_used += 1
         else:
-            say_to_file(text, AUDIO / name, voice, rate or args.rate, slow_wpm=rate)
+            say_to_file(text, AUDIO / name, voice, rate or args.rate, slow_wpm=rate, speed=args.speed)
         files.append(name)
         return f"audio/{name}"
 
@@ -187,7 +206,7 @@ def main():
         print(f"  ✓ {st['id']}")
     # (no letter files: since v0.6.0 the letter-tap task shows the letters on screen instead of speaking them)
     info = {"voice": (f"recorded voice ({own_used} of {len(files)} files) + {voice}" if args.own else voice),
-            "rate": args.rate, "created": datetime.now().isoformat(timespec="seconds")}
+            "rate": args.rate, "speed": args.speed, "created": datetime.now().isoformat(timespec="seconds")}
     write_manifest(rec, letters, info, files)
     print(f"\nVoice pack ready: {len(rec)} instructions ({len(files)} audio files) ({info['voice']}).")
     print("Next: bump CACHE in app/sw.js, refresh the app (and re-upload it for the iPads).")

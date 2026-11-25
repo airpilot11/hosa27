@@ -1,4 +1,4 @@
-# hosa27 App Scoring Sheet (DRAFT v0.4 (app v0.9.0 items), FREEZE BY DEC 4, 2026)
+# hosa27 App Scoring Sheet (DRAFT v0.5 (app v0.10.0 items), FREEZE BY DEC 4, 2026)
 
 Human scorers and the AI use this exact sheet. Total = 30 points, in the same 8 areas and with the same point values as the MoCA. Do not change it after real data collection starts.
 Record the date you froze it here: ________
@@ -10,14 +10,12 @@ Record the date you froze it here: ________
 - No partial credit unless the item's rule says so.
 - Do not use the participant's health, age, education or anything outside the recording.
 
-## Orientation (6 items, 1 point each)
-The answer key is filled in from the session date and the place and city the staff entered.
-- **orient_day**: 1 if the weekday matches exactly.
-- **orient_date**: 1 if the day-of-month number matches exactly. Saying the full date is fine if the number is correct.
-- **orient_month**: 1 if the month matches exactly.
-- **orient_year**: 1 if the year matches exactly ("twenty twenty-six" = 2026).
-- **orient_place**: 1 if they name the place, accepting a reasonable name for it (e.g., "the senior center", the center's name, or the building's name). Naming only the city or "here" = 0.
-- **orient_city**: 1 if the city matches. Accept the correct city with or without the state.
+## Orientation (3 recordings, 2 questions each, 1 point per question = 6 points)
+Each recording answers two questions. Score each question separately and add them (0, 1 or 2).
+- **orient_daydate**: 1 if the weekday matches exactly + 1 if the day-of-month number matches exactly (saying the full date is fine if the number is correct).
+- **orient_monthyear**: 1 if the month matches exactly + 1 if the year matches exactly ("twenty twenty-six" = 2026).
+- **orient_placecity**: 1 if they name the place, accepting a reasonable name for it (e.g., "the senior center", the center's name, or the building's name; naming only the city or "here" = 0 for this part) + 1 if the city matches (with or without the state).
+- If they answer only one of the two questions, score that one and give 0 for the other. A self-correction counts: score the final answer.
 
 ## Executive: trail (2 points, scored automatically by the app)
 10 circles, 1-A-2-B-3-C-4-D-5-E (the same length as the MoCA trail). 1 point for tapping all 10 circles in order within 150 s, plus 1 more point if there was **at most 1** wrong tap (one touch-screen slip is allowed). A wrong tap does not move the trail forward, so the participant must find the right circle. (Not on the human sheet.)
@@ -31,13 +29,13 @@ The answer key is filled in from the session date and the place and city the sta
 - **rotate_1, rotate_2** (1 each, scored automatically by the app): 3 choices per puzzle. 1 if the first tap is the shape that is the same as the top shape, just turned; 0 if a flipped (mirror) shape is tapped or there is no answer within 60 s. (Not on the human sheet.)
 
 ## Naming (3 items, 1 point each)
-- **name_1**: anchor. **name_2**: pineapple. **name_3**: turtle (also accept "tortoise").
+- **name_1**: anchor. **name_2**: guitar. **name_3**: turtle (also accept "tortoise").
 - A general category or description ("a boat thing", "a fruit", "an animal") = 0.
 
 ## Attention (6 points)
 - **digits_4** (1): exact sequence **5 8 2 6**, same order, nothing missing or added.
 - **digits_5** (1): exact sequence **4 1 7 3 9**, same order, nothing missing or added.
-- **letters** (1, scored automatically): tap for every letter A (8 A's among 24 letters). 1 if total errors (missed A's + taps on any other letter) is 1 or fewer, as in the MoCA.
+- **letters** (1, scored automatically): tap for every letter A (7 A's among 20 letters). 1 if total errors (missed A's + taps on any other letter) is 1 or fewer, as in the MoCA.
 - **serial7** (3): start at 100. The correct answers are 93, 86, 79, 72, 65. Judge **each answer** against the participant's *own previous answer* (subtracting 7 from it), so one mistake doesn't ruin later answers. Count correct subtractions out of their first five answers: **4–5 correct = 3 points, 2–3 = 2, 1 = 1, 0 = 0** (MoCA rule).
 
 ## Language (3 points)
@@ -48,18 +46,17 @@ The answer key is filled in from the session date and the place and city the sta
   - **11 or more valid P words = 1 point**, otherwise 0 (MoCA rule).
 
 ## Abstraction (2 items, 1 point each)
-The participant first hears the example "an orange and a banana are both fruit" (not scored).
+The participant first hears the example "a hammer and a saw are both tools" (not scored).
 - **abstract_1** (car – airplane): 1 for "transportation", "ways to travel", "vehicles", "you ride in both to go places". A single feature or a difference ("both have wheels", "both have engines", "one flies") = 0.
 - **abstract_2** (clock – calendar): 1 for "they both tell time", "keep track of time", "measure time", "tell you the date and time". A single feature ("both have numbers", "both hang on the wall") = 0.
 
 ## Delayed memory: recall (5 points)
-Words: **hand, shirt, school, rose, blue**. 1 point per word recalled **without hints**, in any order. Close forms count ("hands", "shirts", "roses"). Different words with a similar meaning do not ("blouse" ≠ shirt, "flower" ≠ rose, "college" ≠ school). Saying a category ("a color") without the word = 0 for that word.
+Words (all fruits): **peach, grape, cherry, lemon, mango**. 1 point per word recalled, in any order. Close forms count ("peaches", "grapes", "cherries", "lemons", "mangoes"). Other fruits do not count ("plum" ≠ peach, "lime" ≠ lemon, "raisin" ≠ grape, "apple" = 0). Saying "fruit" without a list word = 0. No hints are given.
 
 ## Word counts (0 points, research variables)
-For each of these, score = 0 and put the number of the 5 list words (hand, shirt, school, rose, blue) said correctly in `raw_count` (0–5), using the same rules as recall:
+For each of these, score = 0 and put the number of the 5 list words (peach, grape, cherry, lemon, mango) said correctly in `raw_count` (0–5), using the same rules as recall:
 - **learn_1**: right after hearing the list the first time.
 - **learn_2**: right after hearing the list the second time.
-- **recall_cued**: after the category hints (a body part, a piece of clothing, a building, a flower, a color), at the end. Count every list word said in this recording, including words already said in `recall`.
 
 ## Not scored
 welcome, trail_practice, rotate_intro, rotate_practice, end.

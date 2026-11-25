@@ -285,17 +285,20 @@
     if (withSequence && step.sequence) await playSequence(step);
     if (live()) clearCaption();
   }
-  // The words / numbers / sentence to remember or repeat: heard, never shown ("Listen carefully…" instead).
+  // The words / numbers / sentence to remember or repeat: heard, not shown ("Listen carefully…" instead),
+  // except the memory words (step.showSequence), which are shown one at a time as they are spoken.
   async function playSequence(step) {
     const my = playGen; const live = () => my === playGen;
     const rec = RECORDED_AUDIO[step.id];
     await sleep(600); if (!live()) return;
     showCaption("", { listen: true }); lockPause(true); // no pausing mid-list
+    // showSequence (v0.10.0, memory words only): each word is also shown in big letters while it is spoken
+    const showItem = (i) => { if (!step.showSequence) return; const el = $("cap"); if (el) el.innerHTML = `<span class="cap-word">${esc(step.sequence[i])}</span>`; };
     if (rec && rec.parts && rec.seq && rec.seq.length) {
-      for (const s of rec.seq) { if (!live()) break; await playFile(s); if (!live()) break; await sleep(muted() ? 0 : (rec.seqGapMs ?? 700)); }
+      for (const [i, s] of rec.seq.entries()) { if (!live()) break; showItem(i); await playFile(s); if (!live()) break; await sleep(muted() ? 0 : (rec.seqGapMs ?? 700)); }
     } else {
       const rate = step.seqRate ? VOICE.rate * (step.seqRate / 135) : undefined; // slower built-in voice for sentences
-      for (const item of step.sequence) { if (!live()) break; await speakText(item, { rate }); if (!live()) break; await sleep(muted() ? 0 : (step.sequenceGapMs ?? 1000)); }
+      for (const [i, item] of step.sequence.entries()) { if (!live()) break; showItem(i); await speakText(item, { rate }); if (!live()) break; await sleep(muted() ? 0 : (step.sequenceGapMs ?? 1000)); }
     }
     lockPause(false);
     if (live()) clearCaption();
