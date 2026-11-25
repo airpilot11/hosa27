@@ -1,6 +1,6 @@
 // hosa27 service worker: caches the app (and the voice pack) so it keeps working with no Wi-Fi.
 // Bump CACHE (and the ?v= numbers in index.html) when you change any app file, so iPads pick up the new version.
-const CACHE = "hosa27-v0.8.0";
+const CACHE = "hosa27-v0.9.0";
 const FILES = [
   "./", "./index.html", "./styles.css", "./tasks.js", "./app.js", "./manifest.webmanifest",
   "./audio/audio_manifest.js",

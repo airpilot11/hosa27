@@ -74,11 +74,19 @@ def clear_speech(text):
     return re.sub(r"([,;:])\s+", r"\1 [[slnc 250]] ", text)
 
 
-def say_to_file(text, out, voice, rate):
+def slow_speech(text, wpm):
+    """Sentences to repeat: a short silence between words. (Enhanced/Premium Mac voices barely change speed
+    with -r, so pauses are the reliable way to slow them down.) ~100 wpm -> ~150 ms between words."""
+    pause = max(100, min(500, int(60000 / wpm - 450)))  # a word itself lasts ~0.45 s
+    return f" [[slnc {pause}]] ".join(text.split())
+
+
+def say_to_file(text, out, voice, rate, slow_wpm=None):
     """Render with the Mac voice, then encode at good quality (44.1 kHz, 96 kbps AAC). The old direct
     `say -o x.m4a` output was 22 kHz / ~35 kbps, which made consonants sound muffled."""
     tmp = Path(str(out) + ".aiff")
-    subprocess.run(["say", "-v", voice, "-r", str(rate), "-o", str(tmp), clear_speech(text)], check=True)
+    spoken = slow_speech(text, slow_wpm) if slow_wpm else clear_speech(text)
+    subprocess.run(["say", "-v", voice, "-r", str(rate), "-o", str(tmp), spoken], check=True)
     encode(tmp, out)
     tmp.unlink()
 
@@ -101,7 +109,8 @@ def write_script(data):
         for n, sentence in enumerate(split_sentences(st["say"])):
             lines.append(f"| `{st['id']}__p{n}.m4a` | {sentence} |")
         for n, item in enumerate(st.get("sequence") or []):
-            lines.append(f"| `{st['id']}__q{n}.m4a` | {item} |")
+            slow = " *(say this SLOWLY, about 1.5 words per second, every word clear)*" if st.get("seqRate") else ""
+            lines.append(f"| `{st['id']}__q{n}.m4a` | {item}{slow} |")
     (AUDIO / "RECORDING_SCRIPT.md").write_text("\n".join(lines) + "\n")
     print("wrote", AUDIO / "RECORDING_SCRIPT.md")
 
@@ -152,14 +161,14 @@ def main():
         f.unlink()
     rec, letters, files, own_used = {}, {}, [], 0
 
-    def make(name, text):
+    def make(name, text, rate=None):
         """One audio file: the person's recording from app/audio/own/ if present, otherwise the Mac voice."""
         nonlocal own_used
         own = OWN / name
         if args.own and own.exists():
             encode(own, AUDIO / name); own_used += 1
         else:
-            say_to_file(text, AUDIO / name, voice, args.rate)
+            say_to_file(text, AUDIO / name, voice, rate or args.rate, slow_wpm=rate)
         files.append(name)
         return f"audio/{name}"
 
@@ -170,7 +179,8 @@ def main():
                  for n, sentence in enumerate(split_sentences(st["say"]))]
         entry = {"parts": parts}
         if st.get("sequence"):
-            entry["seq"] = [make(f"{st['id']}__q{n}.m4a", item) for n, item in enumerate(st["sequence"])]
+            # seqRate (tasks.js) = slower speed for sentences to repeat, e.g. 100 words per minute
+            entry["seq"] = [make(f"{st['id']}__q{n}.m4a", item, st.get("seqRate")) for n, item in enumerate(st["sequence"])]
             # the gap after each item; item audio itself lasts ~0.4-0.6 s
             entry["seqGapMs"] = max(250, int(st.get("sequenceGapMs", 1000)) - 450)
         rec[st["id"]] = entry

@@ -34,8 +34,9 @@ def response_ms(it: dict):
 
 # Paper data entered by hand. `group` = A (no reported impairment) or B (reported MCI / mild dementia).
 # Group status is kept ONLY here - never on the blind human scoring sheets or in the AI prompts.
+# Age, gender and years of school are typed into the app by staff (session file), so they are not repeated here.
 PAPER_FIELDS = ["code", "group", "reported_status", "status_reported_by", "diagnosis_year", "consent_type", "site",
-                "age", "education_years", "tech_comfort_1to5", "prior_memory_check_yes_no",
+                "tech_comfort_1to5", "prior_memory_check_yes_no",
                 "physical_activity_yes_no", "activity_minutes_per_week", "chair_yoga_yes_no",
                 "slums_total", "slums_given_by", "sus_total", "notes"]
 
@@ -106,7 +107,8 @@ def main() -> None:
             timing_rows.append({"code": code, "item_id": st["id"], "domain": st.get("domain"), "type": st.get("type"),
                                 "practice": "yes" if st["id"].endswith("practice") else "",
                                 "latency_s": sec(it.get("latencyMs")), "speech_end_s": sec(it.get("speechEndMs")),
-                                "response_s": sec(r), "instruction_s": sec(it.get("instructionMs")),
+                                "response_s": sec(r), "start_tap_s": sec(it.get("startTapMs")),
+                                "instruction_s": sec(it.get("instructionMs")),
                                 "total_s": sec(it.get("totalMs")), "replays": it.get("replays", 0)})
             if st["id"].endswith("practice") or not st.get("domain"):
                 continue
@@ -116,6 +118,8 @@ def main() -> None:
             if st.get("type") == "speak" and isinstance(it.get("latencyMs"), (int, float)) and not st.get("countdown"):
                 by_domain_lat.setdefault(d, []).append(it["latencyMs"])
                 speech_lat.append(it["latencyMs"])
+        start_taps = [it["startTapMs"] for st in s["steps"] if (it := items.get(st["id"])) and not it.get("skipped")
+                      and not st["id"].endswith("practice") and isinstance(it.get("startTapMs"), (int, float))]
         rot = [items.get(k, {}) for k in ("rotate_1", "rotate_2") if items.get(k) and not items[k].get("skipped")]
         rot_rt = [x["rtMs"] for x in rot if isinstance(x.get("rtMs"), (int, float))]
         trail, letters = items.get("trail", {}), items.get("letters", {})
@@ -123,7 +127,9 @@ def main() -> None:
         if s.get("completedAt"):
             t0, t1 = (datetime.fromisoformat(x.replace("Z", "+00:00")) for x in (s["startedAt"], s["completedAt"]))
             minutes = round((t1 - t0).total_seconds() / 60, 1)
-        meta_rows.append({"code": code, "order": s.get("order"), "local_date": s.get("localDate"),
+        meta_rows.append({"code": code, "age": s.get("age", ""), "gender": s.get("gender") or "",
+                          "education_years": s.get("educationYears", ""),
+                          "order": s.get("order"), "local_date": s.get("localDate"),
                           "trail_seconds": round(trail["durationMs"] / 1000, 1) if trail.get("completed") and trail.get("durationMs") else "",
                           "trail_errors": trail.get("errors", ""), "letters_misses": letters.get("misses", ""),
                           "letters_false_taps": letters.get("falseAlarms", ""),
@@ -133,6 +139,7 @@ def main() -> None:
                           "rotate_mean_rt_s": sec(mean(rot_rt)) if rot_rt else "",
                           "copy_box_draw_s": sec(items.get("copy_box", {}).get("drawMs")),
                           "speech_latency_mean_s": sec(mean(speech_lat)) if speech_lat else "",
+                          "start_tap_mean_s": sec(mean(start_taps)) if start_taps else "",
                           **{f"latency_{d}_s": sec(mean(v)) for d, v in sorted(by_domain_lat.items())},
                           **{f"time_{d}_s": sec(v) for d, v in sorted(by_domain_resp.items())},
                           "app_minutes": minutes,
@@ -156,7 +163,7 @@ def main() -> None:
     write_csv(SCORES / "session_meta.csv", meta_rows, meta_fields)
     write_csv(SCORES / "item_timing.csv", timing_rows,
               ["code", "item_id", "domain", "type", "practice", "latency_s", "speech_end_s", "response_s",
-               "instruction_s", "total_s", "replays"])
+               "start_tap_s", "instruction_s", "total_s", "replays"])
     write_csv(SCORES / "app_logic_scores.csv", logic_rows, ["code", "item_id", "domain", "max_points", "score", "details"])
 
     paper = SCORES / "paper_scores.csv"

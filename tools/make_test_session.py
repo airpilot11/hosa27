@@ -27,14 +27,16 @@ now = datetime.now()
 answers = {  # what the fake participant "says"
     "orient_day": now.strftime("%A"), "orient_date": f"It is the {now.day}th", "orient_month": now.strftime("%B"),
     "orient_year": "twenty twenty five, no wait, twenty twenty six", "orient_place": "the test center", "orient_city": "Atlanta",
-    "learn_1": "river, candle, and garden",
+    "learn_1": "hand, shirt, and rose",
+    "learn_2": "hand, shirt, school, rose",
     "name_1": "an anchor", "name_2": "a pineapple", "name_3": "um, a frog?",
-    "digits_6": "7 2 8 5 1 6", "digits_7": "3 9 4 8 1 6 2", "serial7": "73, 66, 58, 51, 44",
-    "sentence_1": "The woman who lives next to the bakery walks her two dogs every evening.",
-    "sentence_2": "Before the storm, the farmer locked the barn and counted his sheep.",
+    "digits_4": "5 8 2 6", "digits_5": "4 1 3 7 9", "serial7": "93, 86, 78, 71, 64",
+    "sentence_1": "The children played in the park after lunch.",
+    "sentence_2": "My sister brings flowers when she visits.",
     "fluency": "pen, pencil, paper, Paris, purple, pink, pickle, plant, planted, phone, pie, pear, pillow, pot",
-    "abstract_1": "they both give you the news", "abstract_2": "they both have colors",
-    "recall": "river, jacket, candle, and I think piano",
+    "abstract_1": "they are both ways to travel", "abstract_2": "they both have numbers",
+    "recall": "hand, rose, and I think red",
+    "recall_cued": "hand, shirt, school, rose, and red",
 }
 
 
@@ -57,18 +59,19 @@ for st in steps:
         it["image"] = "data:image/png;base64," + base64.b64encode((ROOT / "app/icons/icon-512.png").read_bytes()).decode()
         it.update(strokes=9, firstStrokeMs=6200, latencyMs=900, drawMs=38000, durationMs=44200)
     elif st["id"] == "trail":
-        it.update(completed=True, errors=1, durationMs=58000, firstTapMs=2100, appScore=1)
+        it.update(completed=True, errors=1, durationMs=58000, firstTapMs=2100, appScore=2)
     elif st["id"] in ("rotate_1", "rotate_2"):
         ok = st["id"] == "rotate_1"
         it.update(choice=1 if ok else 0, correct=ok, rtMs=7400 if ok else 12900, appScore=1 if ok else 0, stopReason="tapped")
     elif st["id"] == "letters":
-        it.update(hits=8, misses=0, falseAlarms=1, lureTaps=1, meanHitRtMs=640, appScore=1)
+        it.update(hits=8, misses=0, falseAlarms=1, lureTaps=0, meanHitRtMs=640, appScore=1)
 
     items[st["id"]] = it
 
 session = {
     "app": "hosa27", "version": "test", "demo": True, "sessionId": f"DEMO-T99_{int(now.timestamp())}", "code": "T99",
     "order": "app_first", "place": "Test Center", "city": "Alpharetta", "observer": "XX",
+    "age": 71, "gender": "Female", "educationYears": 12,
     "startedAt": now.isoformat(), "localDate": now.strftime("%Y-%m-%d"), "weekday": now.strftime("%A"),
     "month": now.strftime("%B"), "dayOfMonth": now.day, "year": now.year,
     "steps": [{k: st.get(k) for k in ("id", "type", "domain", "max", "scoredBy", "key")}

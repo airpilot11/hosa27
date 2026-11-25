@@ -401,3 +401,54 @@ table.list th { color: var(--muted); font-size: 13px; text-transform: uppercase;
 @keyframes flipMirror { 0%, 30% { transform: scaleX(1); } 50%, 80% { transform: scaleX(-1); } 100% { transform: scaleX(1); } }
 @media (prefers-reduced-motion: reduce) { .spin, .flip { animation-duration: 16s; } }
 @media (max-height: 900px) { .demo-shape { width: clamp(110px, 20vh, 170px); height: clamp(110px, 20vh, 170px); } .rot-legend i { width: 24px; height: 24px; } }
+
+/* ---------- v0.9.0: "What to do" panel (always on screen) + START button ---------- */
+.stage.with-howto { gap: clamp(14px, 2vw, 24px); }
+.stage.with-howto .card { flex: 1 1 0; min-width: 0; }
+.howto {
+  flex: 0 0 clamp(250px, 27vw, 330px); align-self: center; text-align: left;
+  background: var(--surface); border: 4px solid var(--brand); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 20px 22px 22px;
+}
+.howto h3 { margin: 0 0 12px; font-size: calc(clamp(22px, 2.4vw, 26px) * var(--fs)); color: var(--brand-ink); font-weight: 850; }
+.howto ol { margin: 0; padding-left: 1.35em; display: flex; flex-direction: column; gap: 12px;
+  font-size: calc(clamp(18px, 1.9vw, 22px) * var(--fs)); line-height: 1.32; font-weight: 650; color: var(--ink); }
+.howto li::marker { font-weight: 900; color: var(--brand); }
+.howto .rot-legend { flex-direction: column; align-items: stretch; margin-top: 16px; gap: 8px; font-size: calc(17px * var(--fs)); }
+.howto .rot-legend span { justify-content: flex-start; border-radius: 14px; }
+/* portrait / narrow: the panel sits above the question, in two columns to save height */
+@media (orientation: portrait), (max-width: 980px) {
+  .stage.with-howto { flex-direction: column; align-items: stretch; justify-content: flex-start; }
+  .stage.with-howto .card { flex: none; width: 100%; max-width: none; }
+  .howto { flex: none; align-self: stretch; padding: 14px 18px 16px; }
+  .howto h3 { margin-bottom: 8px; }
+  .howto ol { gap: 6px; }
+  .howto .rot-legend { flex-direction: row; flex-wrap: wrap; margin-top: 10px; }
+}
+.gate { display: flex; flex-direction: column; align-items: center; gap: 12px; animation: cardIn .3s ease both; }
+.gate-hint { font-size: calc(clamp(22px, 2.6vw, 28px) * var(--fs)); font-weight: 750; color: var(--brand-ink); }
+.btn-start { font-size: calc(clamp(30px, 3.6vw, 40px) * var(--fs)); min-width: 300px; min-height: 96px; background: var(--ok); box-shadow: 0 6px 0 #1f6b42;
+  animation: startPulse 1.8s ease-in-out infinite; }
+.btn-start:active { box-shadow: 0 2px 0 #1f6b42; }
+@keyframes startPulse { 50% { transform: scale(1.04); } }
+@media (prefers-reduced-motion: reduce) { .btn-start { animation: none; } }
+.status.speak { font-size: calc(clamp(26px, 3vw, 34px) * var(--fs)); font-weight: 900; }
+/* nothing can be tapped/drawn until START */
+.trail-area.waiting, canvas.draw.waiting { opacity: .45; }
+.rot-choices.waiting { visibility: hidden; }
+.rot-choices { grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr)); max-width: min(calc(var(--n, 4) * 165px), calc(var(--n, 4) * 22vh)); }
+.rot-target-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.rot-tag { font-size: calc(17px * var(--fs)); font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.demo-row { display: grid; grid-template-columns: 1fr 1.3fr 1fr; gap: 10px; }
+@media (max-width: 560px) { .demo-row { grid-template-columns: 1fr; } }
+@media (max-height: 900px) {
+  .btn-start { min-height: 80px; font-size: calc(clamp(26px, 3.6vh, 34px) * var(--fs)); }
+  .howto { padding: 14px 18px; }
+  .howto ol { gap: 8px; font-size: calc(clamp(17px, 2.3vh, 20px) * var(--fs)); }
+}
+.card.gating .orb, .card.gating .ring { display: none; }
+.card.gating .voice-state { min-height: 0; }
+.with-howto .trail-dot { width: clamp(66px, min(7.5vw, 13vh), 96px); height: clamp(66px, min(7.5vw, 13vh), 96px); }
+@media (orientation: portrait) and (min-width: 760px), (max-width: 980px) and (min-width: 760px) {
+  .howto ol { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(var(--rows), auto); grid-auto-flow: column; gap: 6px 44px; }
+}

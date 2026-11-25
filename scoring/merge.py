@@ -112,7 +112,8 @@ def main() -> None:
         return num(r.get("raw_count", r.get("raw_count_if_fluency")))
     flu_ai = {c: raw(ai, c, "fluency") for c in meta}
     flu_h = {c: raw(human, c, "fluency") for c in meta}
-    learn = {(c, kind): raw(src, c, "learn_1") for c in meta for kind, src in (("ai", ai), ("human", human))}
+    counts = {(c, kind, item): raw(src, c, item) for c in meta for kind, src in (("ai", ai), ("human", human))
+              for item in ("learn_1", "learn_2", "recall_cued")}
     recall_ai = {c: num(ai.get((c, "recall"), {}).get("ai_score")) for c in meta}
     recall_h = {c: num(human.get((c, "recall"), {}).get("score")) for c in meta}
     sf_ai, sf_h = speed_fluency(flu_ai, recall_ai, trail_sec), speed_fluency(flu_h, recall_h, trail_sec)
@@ -121,7 +122,8 @@ def main() -> None:
     final = []
     for code, m in sorted(meta.items()):
         t, p = totals[code], paper.get(code, {})
-        row = {"code": code, "order": m["order"], "completed": m["completed"], "help_events": m["help_events"],
+        row = {"code": code, "age": m.get("age", ""), "gender": m.get("gender", ""),
+               "education_years": m.get("education_years", ""), "order": m["order"], "completed": m["completed"], "help_events": m["help_events"],
                "app_total_ai": fmt(t.get("app_total_ai", 0.0)) if missing[code]["ai"] == 0 else "",
                "app_total_human": fmt(t.get("app_total_human", 0.0)) if missing[code]["human"] == 0 else "",
                "ai_items_missing": missing[code]["ai"], "human_items_missing": missing[code]["human"]}
@@ -132,10 +134,16 @@ def main() -> None:
                     "fluency_count_ai": fmt(flu_ai.get(code)) if flu_ai.get(code) is not None else "",
                     "fluency_count_human": fmt(flu_h.get(code)) if flu_h.get(code) is not None else "",
                     "speed_fluency_ai": sf_ai.get(code, ""), "speed_fluency_human": sf_h.get(code, "")})
-        for kind in ("ai", "human"):  # words repeated right after hearing the list once (immediate recall)
-            l1 = learn.get((code, kind))
-            row[f"learn_words_{kind}"] = fmt(l1) if l1 is not None else ""
-        timing_keys = [k for k in m if k.startswith(("latency_", "time_", "speech_latency"))]
+        # MoCA-style education adjustment: +1 point (max 30) for 12 or fewer years of school
+        edu = num(m.get("education_years"))
+        for kind in ("ai", "human"):
+            tot = row[f"app_total_{kind}"]
+            row[f"app_total_{kind}_edu_adj"] = "" if tot == "" or edu is None else fmt(min(30, tot + (1 if edu <= 12 else 0)))
+        for kind in ("ai", "human"):  # list words said after hearing the list once / twice, and with category hints
+            for item, col in (("learn_1", "learn_words_1"), ("learn_2", "learn_words_2"), ("recall_cued", "cued_recall_words")):
+                v = counts.get((code, kind, item))
+                row[f"{col}_{kind}"] = fmt(v) if v is not None else ""
+        timing_keys = [k for k in m if k.startswith(("latency_", "time_", "speech_latency", "start_tap"))]
         for k in ("trail_seconds", "trail_errors", "trail_first_tap_s", "letters_misses", "letters_false_taps",
                   "letters_lure_taps", "letters_mean_rt_ms", "rotate_correct", "rotate_mean_rt_s", "copy_box_draw_s",
                   *timing_keys,

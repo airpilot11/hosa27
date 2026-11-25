@@ -32,7 +32,7 @@ SCHEMA = {
     "type": "object",
     "properties": {
         "score": {"type": "integer", "description": "points awarded for this item"},
-        "raw_count": {"type": "integer", "description": "fluency: number of valid words starting with P; learn_1/learn_2: number of list words said (0-5); otherwise 0"},
+        "raw_count": {"type": "integer", "description": "fluency: number of valid words starting with P; learn_1/learn_2/recall_cued: number of list words said (0-5); otherwise 0"},
         "credited": {"type": "array", "items": {"type": "string"}, "description": "answers/criteria that earned credit"},
         "rationale": {"type": "string", "description": "one or two sentences citing the scoring-sheet rule applied"},
     },
