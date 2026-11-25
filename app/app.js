@@ -1013,7 +1013,7 @@
     if (!session) return;
     if (STEPS[stepIndex]?.type === "end") { stopSpeech(); afterApp(); return; } // app finished: next part of the visit
     const step = STEPS[stepIndex];
-    const scored = STEPS.filter((s) => s.type !== "intro" && s.type !== "end");
+    const scored = questionSteps();
     const pos = scored.findIndex((s) => s.id === step.id);
     const mins = Math.round((Date.now() - new Date(session.startedAt)) / 6000) / 10;
     $overlay.innerHTML = `<div class="panel"><h2>Staff menu</h2>
@@ -1178,18 +1178,23 @@
   // =====================================================================
   // PARTICIPANT SCREENS
   // =====================================================================
+  // Screens counted as "Question X of N": everything except the welcome, the end, and practice / how-it-works
+  // screens (those show "Practice" instead; v0.10.2).
+  const questionSteps = () => STEPS.filter((s) => s.type !== "intro" && s.type !== "end" && !s.practice);
   function shell(inner, { pause = true, progress = true, howto = true } = {}) {
     const step = STEPS[stepIndex];
     const how = howto ? howToFor(step) : null;
-    const scored = STEPS.filter((s) => s.type !== "intro" && s.type !== "end");
+    const scored = questionSteps();
     const pos = scored.findIndex((s) => s.id === step.id);
-    const pct = step.type === "end" ? 100 : pos < 0 ? 0 : Math.round((pos / scored.length) * 100);
+    const isPractice = !!step.practice && step.type !== "intro" && step.type !== "end";
+    const done = STEPS.slice(0, stepIndex).filter((s) => scored.includes(s)).length; // questions finished before this screen
+    const pct = step.type === "end" ? 100 : Math.round((done / scored.length) * 100);
     return `<div class="pshell">
       <header class="pbar">
         <div class="brand">${ICON.logo}<span>${esc(STUDY.appName)}</span></div>
         <div class="pprog">${progress ? `<div class="pprog-track"><div class="pprog-fill" style="width:${pct}%"></div></div>
-          <div class="pprog-label">${pos >= 0 ? `Question ${pos + 1} of ${scored.length}` : step.type === "end" ? "Finished" : ""}</div>` : ""}</div>
-        ${pause && pos >= 0 ? `<button class="pause-btn" id="pauseBtn" aria-label="Pause">${ICON.pause}<span>Pause</span></button>` : `<span></span>`}
+          <div class="pprog-label">${pos >= 0 ? `Question ${pos + 1} of ${scored.length}` : isPractice ? "Practice" : step.type === "end" ? "Finished" : ""}</div>` : ""}</div>
+        ${pause && (pos >= 0 || isPractice) ? `<button class="pause-btn" id="pauseBtn" aria-label="Pause">${ICON.pause}<span>Pause</span></button>` : `<span></span>`}
       </header>
       <main class="stage ${how ? "with-howto" : ""}">${how ? howToPanel(step, how) : ""}<div class="card">${inner}</div></main>
       <footer class="pfoot">${esc(STUDY.footer)}</footer>
@@ -1313,6 +1318,7 @@
     const C = 2 * Math.PI * 52;
     const visual = step.image
       ? `<img class="naming-img" src="${esc(step.image)}" alt="" onerror="this.outerHTML='<div class=&quot;naming-emoji&quot;>${step.emoji || "?"}</div>'">`
+      : Array.isArray(step.emoji) ? `<div class="naming-row" aria-hidden="true">${step.emoji.map((e, i) => `<div class="naming-cell"><div class="naming-emoji">${e}</div><div class="naming-num">${i + 1}</div></div>`).join("")}</div>`
       : step.emoji ? `<div class="naming-emoji" aria-hidden="true">${step.emoji}</div>` : "";
     $app.innerHTML = shell(`
       ${chip(step)}

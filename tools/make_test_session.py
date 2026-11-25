@@ -25,12 +25,11 @@ steps = json.loads(subprocess.run(["osascript", "-l", "JavaScript", "-e", jxa], 
 
 now = datetime.now()
 answers = {  # what the fake participant "says"
-    "orient_daydate": f"It's {now.strftime('%A')}, the {now.day}th",
-    "orient_monthyear": f"{now.strftime('%B')}, twenty twenty five, no wait, twenty twenty six",
+    "orient_fulldate": f"It's {now.strftime('%A')}, {now.strftime('%B')} the {now.day}th, twenty twenty five, no wait, twenty twenty six",
     "orient_placecity": "the test center, in Atlanta",
     "learn_1": "peach, grape, and lemon",
     "learn_2": "peach, grape, cherry, lemon",
-    "name_1": "an anchor", "name_2": "a guitar", "name_3": "um, a frog?",
+    "naming": "an anchor, a guitar, and um, a frog?",
     "digits_4": "5 8 2 6", "digits_5": "4 1 3 7 9", "serial7": "93, 86, 78, 71, 64",
     "sentence_1": "The children played in the park after lunch.",
     "sentence_2": "My sister brings flowers when she visits.",

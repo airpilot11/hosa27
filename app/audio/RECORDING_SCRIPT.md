@@ -16,12 +16,10 @@ Save each recording with the exact file name into `app/audio/own/` (`.m4a` from 
 | `welcome__p5.m4a` | The steps are written on the screen, so you do not have to remember them. |
 | `welcome__p6.m4a` | Then tap the big green Start button, and answer. |
 | `welcome__p7.m4a` | Tap Start now to begin. |
-| `orient_daydate__p0.m4a` | What day of the week is it today? |
-| `orient_daydate__p1.m4a` | And what is today's date? |
-| `orient_daydate__p2.m4a` | Tap Start, and then say both answers. |
-| `orient_monthyear__p0.m4a` | What month is it? |
-| `orient_monthyear__p1.m4a` | And what year is it? |
-| `orient_monthyear__p2.m4a` | Tap Start, and then say both answers. |
+| `orient_fulldate__p0.m4a` | What is today's date? |
+| `orient_fulldate__p1.m4a` | Please say the day of the week, the month, the date, and the year. |
+| `orient_fulldate__p2.m4a` | The four parts are written on the screen. |
+| `orient_fulldate__p3.m4a` | Tap Start, and then say your answer. |
 | `orient_placecity__p0.m4a` | What is the name of the place we are in? |
 | `orient_placecity__p1.m4a` | And what city are we in? |
 | `orient_placecity__p2.m4a` | Tap Start, and then say both answers. |
@@ -71,13 +69,9 @@ Save each recording with the exact file name into `app/audio/own/` (`.m4a` from 
 | `rotate_1__p2.m4a` | Tap Start when you are ready. |
 | `rotate_2__p0.m4a` | One more puzzle. |
 | `rotate_2__p1.m4a` | Tap Start when you are ready. |
-| `name_1__p0.m4a` | Look at the picture. |
-| `name_1__p1.m4a` | What is this called? |
-| `name_1__p2.m4a` | Tap Start, and then say your answer. |
-| `name_2__p0.m4a` | What is this called? |
-| `name_2__p1.m4a` | Tap Start, and then say your answer. |
-| `name_3__p0.m4a` | What is this called? |
-| `name_3__p1.m4a` | Tap Start, and then say your answer. |
+| `naming__p0.m4a` | Look at the three pictures. |
+| `naming__p1.m4a` | Say what each one is called, starting with number one. |
+| `naming__p2.m4a` | Tap Start, and then say your answers. |
 | `digits_4__p0.m4a` | Next, I will say four numbers. |
 | `digits_4__p1.m4a` | When I finish, say them back in the same order. |
 | `digits_4__p2.m4a` | Tap Start, and then listen. |

@@ -27,7 +27,7 @@ Open **http://localhost:8027/?researcher=1**, or tick **🔧 Researcher mode** o
 | Button | What it does |
 |---|---|
 | ◀ Back / Skip ▶ | Go to the previous or next step |
-| Step menu | Jump straight to any of the 27 steps (points shown) |
+| Step menu | Jump straight to any of the 24 screens (points shown) |
 | 🔊 Voice | normal → fast → mute |
 | ⏱ Timers | real → short (recordings stop after 4 s, the word-fluency timer after 6 s, the trail after 20 s, shape questions after 8 s) |
 | 📋 Saved data | See what has been saved so far (audio length, drawing, automatic scores) |
@@ -118,20 +118,20 @@ Participants never see a score.
 
 All corrections appear in **View** (corrections log), the summary CSV and `final_dataset.csv` (corrections_total, redo_count, skipped_count, pauses_total, mic_check, retest). They give you the numbers you need for the Methods section and any decisions about excluding data.
 
-## Item set and research variables (app v0.10.0)
+## Item set and research variables (app v0.10.2)
 
 **How every question works (v0.9.0):** the instructions play first (with subtitles), and a **"What to do" panel lists the steps on screen for the whole question** (beside the question in landscape, above it in portrait), so participants never have to memorize instructions. Then a big green **START** button appears, with **Hear the instructions again**. Nothing is played, shown or timed until the participant taps START: the words / numbers / sentence to remember play *after* START, the trail circles and drawing pad unlock, the shape choices appear, the letters begin. Then a chime and **SPEAK NOW** for spoken answers.
 
-**v0.10.0 (shorter, 15 minutes max):** 25 questions instead of 29. Orientation is asked in 3 screens with 2 questions each, the hint round after recall is gone, the letter task is 20 letters (~40 s), and the spoken instructions are shorter but **about 20% slower** (the steps stay on screen). The 5 memory words are now **all fruits** and each one is **shown on screen while it is spoken**. Still 30 points in the same 8 areas.
+**v0.10.2: 19 questions** (plus 3 practice / how-it-works screens, which show "Practice" and are not counted). As in the MoCA, today's date is asked on one screen (day, month, date, year) and the 3 pictures are named on one screen. **v0.10.0 (shorter, 15 minutes max):** orientation went from 6 screens to fewer, the hint round after recall is gone, the letter task is 20 letters (~40 s), and the spoken instructions are shorter but **about 20% slower** (the steps stay on screen). The 5 memory words are now **all fruits** and each one is **shown on screen while it is spoken**. Still 30 points in the same 8 areas.
 
 No topic labels (e.g. "Memory") are shown to participants. **Same 8 areas and point values as the MoCA, 30 points**, made easier and closer to the MoCA than v0.8 (which had harder items and produced unusually low scores). Items still avoid the paper SLUMS (no clock, animal naming, money math, backward digits, story or SLUMS words).
 
 | Area (points) | Items | MoCA equivalent |
 |---|---|---|
-| Orientation (6) | day + date, month + year, place + city (3 screens, 2 questions each, 1 pt per question) | same |
+| Orientation (6) | full date (day, month, date, year) on one screen + place and city on one screen, 1 pt per part | same |
 | Executive (2) | trail with **10 circles**, 1-A-2-B … 5-E (practice first); 1 pt finished in order + 1 pt if ≤1 wrong tap | same 10-circle trail |
 | Visuospatial (3) | copy a 3-D box (1, AI-scored) + 2 shape puzzles with **3 choices** (1 each), after a how-it-works screen and a practice | cube (1) + clock (3; clock is in the SLUMS) |
-| Naming (3) | anchor, guitar, turtle | lion, rhino, camel |
+| Naming (3) | anchor, guitar, turtle, all 3 on one screen | lion, rhino, camel |
 | Attention (6) | **4 and 5** numbers in the same order (1 each), tap for every **A** (20 letters, no look-alike letters) (1), serial 7s **from 100** (3) | 5 forward + 3 backward, tap for A, serial 7s from 100 |
 | Language (3) | two **short 8-word sentences, played slowly** (~85 words/min) (1 each), P words in 1 minute (1; 11+) | 2 sentences, F words (11+) |
 | Abstraction (2) | car–airplane, clock–calendar, after the example "a hammer and a saw are both tools" (not fruit, so it can't mix with the memory list) | train–bicycle, watch–ruler, banana–orange example |

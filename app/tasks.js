@@ -6,7 +6,7 @@
 // collection starts. The version number is saved into every session.
 // =====================================================================
 
-const HOSA27_VERSION = "0.10.1";
+const HOSA27_VERSION = "0.10.2";
 
 // What participants see (header, welcome screen, footer). Edit freely.
 const STUDY = {
@@ -32,7 +32,8 @@ const VOICE = {
 };
 
 // ---------------------------------------------------------------------
-// v0.10.0 item set (based on v0.9.0): still the MoCA's 8 areas and 30 points, made SHORTER for a
+// v0.10.2: 19 questions (+ 3 practice screens, not counted): today's date on one screen, the 3 pictures on
+// one screen (both as in the MoCA). v0.10.0 item set (based on v0.9.0): still the MoCA's 8 areas and 30 points, made SHORTER for a
 // 15-minute maximum: orientation asked in 3 screens (2 questions each), no hint round after recall,
 // a shorter letter task, and shorter spoken instructions (the steps stay on screen, so the voice only
 // needs to say the essentials, slowly). Still avoids the paper SLUMS items (no clock, no animal naming,
@@ -95,17 +96,13 @@ const STEPS = [
     text: "There are no wrong answers.\nJust do your best.",
     say: "Welcome. This check takes about fifteen minutes. There are no wrong answers. Just do your best. For each question, first listen. The steps are written on the screen, so you do not have to remember them. Then tap the big green Start button, and answer. Tap Start now to begin." },
 
-  // ---- Orientation (6): 3 screens, 2 questions each (1 point per question) ----
-  { id: "orient_daydate", type: "speak", domain: "Orientation", max: 2, scoredBy: "ai_speech",
-    text: "1. What DAY of the week is it today?\n2. What is today's DATE? (the number)",
-    say: "What day of the week is it today? And what is today's date? Tap Start, and then say both answers.",
-    howTo: ["Tap the green START button.", "Say the DAY of the week.", "Say today's DATE (the number).", "Tap I'M DONE."],
-    maxSeconds: 20, allowReplay: true, key: "day of the week: {weekday} (1 point); date number: {day_of_month} (1 point)" },
-  { id: "orient_monthyear", type: "speak", domain: "Orientation", max: 2, scoredBy: "ai_speech",
-    text: "1. What MONTH is it?\n2. What YEAR is it?",
-    say: "What month is it? And what year is it? Tap Start, and then say both answers.",
-    howTo: ["Tap the green START button.", "Say the MONTH.", "Say the YEAR.", "Tap I'M DONE."],
-    maxSeconds: 20, allowReplay: true, key: "month: {month} (1 point); year: {year} (1 point)" },
+  // ---- Orientation (6): 2 screens, as in the MoCA ("tell me today's date", then place and city). 1 point per part ----
+  { id: "orient_fulldate", type: "speak", domain: "Orientation", max: 4, scoredBy: "ai_speech",
+    text: "What is today's date?\nSay all 4: the DAY of the week, the MONTH, the DATE, and the YEAR.",
+    say: "What is today's date? Please say the day of the week, the month, the date, and the year. The four parts are written on the screen. Tap Start, and then say your answer.",
+    howTo: ["Tap the green START button.", "Say the DAY of the week.", "Say the MONTH.", "Say the DATE (the number).", "Say the YEAR.", "Tap I'M DONE."],
+    maxSeconds: 25, allowReplay: true,
+    key: "day of the week: {weekday} (1 point); month: {month} (1 point); date number: {day_of_month} (1 point); year: {year} (1 point)" },
   { id: "orient_placecity", type: "speak", domain: "Orientation", max: 2, scoredBy: "ai_speech",
     text: "1. What is the name of this PLACE?\n2. What CITY are we in?",
     say: "What is the name of the place we are in? And what city are we in? Tap Start, and then say both answers.",
@@ -186,19 +183,13 @@ const STEPS = [
     text: "Which shape is the SAME as the top one, just turned?",
     say: "One more puzzle. Tap Start when you are ready." },
 
-  // ---- Naming (3): common, familiar objects with clear pictures (no fruit, so it can't mix with the memory list) ----
-  { id: "name_1", type: "speak", domain: "Naming", max: 1, scoredBy: "ai_speech",
-    text: "What is this called?", say: "Look at the picture. What is this called? Tap Start, and then say your answer.", emoji: "⚓",
-    howTo: ["Look at the picture.", "Tap the green START button.", "Say what it is called.", "Tap I'M DONE."],
-    maxSeconds: 12, allowReplay: true, key: "anchor" },
-  { id: "name_2", type: "speak", domain: "Naming", max: 1, scoredBy: "ai_speech",
-    text: "What is this called?", say: "What is this called? Tap Start, and then say your answer.", emoji: "🎸",
-    howTo: ["Look at the picture.", "Tap the green START button.", "Say what it is called.", "Tap I'M DONE."],
-    maxSeconds: 12, allowReplay: true, key: "guitar" },
-  { id: "name_3", type: "speak", domain: "Naming", max: 1, scoredBy: "ai_speech",
-    text: "What is this called?", say: "What is this called? Tap Start, and then say your answer.", emoji: "🐢",
-    howTo: ["Look at the picture.", "Tap the green START button.", "Say what it is called.", "Tap I'M DONE."],
-    maxSeconds: 12, allowReplay: true, key: "turtle (also accept: tortoise)" },
+  // ---- Naming (3): 3 common objects on ONE screen, as in the MoCA (no fruit, so it can't mix with the memory list) ----
+  { id: "naming", type: "speak", domain: "Naming", max: 3, scoredBy: "ai_speech",
+    text: "What are these 3 things called?", emoji: ["⚓", "🎸", "🐢"],
+    say: "Look at the three pictures. Say what each one is called, starting with number one. Tap Start, and then say your answers.",
+    howTo: ["Look at the 3 pictures.", "Tap the green START button.", "Say what each one is called: 1, then 2, then 3.", "Tap I'M DONE."],
+    maxSeconds: 25, allowReplay: true,
+    key: "1. anchor (1 point); 2. guitar (1 point); 3. turtle, also accept tortoise (1 point). Any order is fine." },
 
   // ---- Attention (6): short forward number lists (4 and 5 numbers), letter tap, serial 7s from 100 (MoCA) ----
   { id: "digits_4", type: "speak", domain: "Attention", max: 1, scoredBy: "ai_speech",

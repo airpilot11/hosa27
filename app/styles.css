@@ -141,6 +141,11 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 4px s
 /* naming picture */
 .naming-img { max-width: min(70vw, 520px); max-height: 34vh; object-fit: contain; border-radius: 18px; }
 .naming-emoji { font-size: clamp(150px, 22vh, 230px); line-height: 1.05; }
+/* several pictures on one screen (naming, v0.10.2): numbered, side by side */
+.naming-row { display: flex; justify-content: center; gap: clamp(16px, 4vw, 48px); flex-wrap: wrap; }
+.naming-row .naming-emoji { font-size: clamp(90px, 14vh, 150px); }
+.naming-cell { display: flex; flex-direction: column; align-items: center; }
+.naming-num { font-weight: 800; font-size: 1.4em; color: var(--brand-ink); }
 
 /* trail */
 .trail-area { position: relative; width: 100%; height: clamp(360px, 52vh, 640px); background: var(--bg); border-radius: 24px; touch-action: none; }
@@ -300,6 +305,7 @@ table.list th { color: var(--muted); font-size: 13px; text-transform: uppercase;
   .btn-ghost { min-height: 58px; padding: 10px 24px; }
   .naming-img { max-height: 26vh; }
   .naming-emoji { font-size: clamp(120px, 19vh, 190px); }
+  .naming-row .naming-emoji { font-size: clamp(76px, 12vh, 120px); }
   .naming-img { max-height: 22vh; }
   .tap-target { width: clamp(180px, 30vh, 280px); height: clamp(180px, 30vh, 280px); }
   .letter-box { width: clamp(170px, 28vh, 260px); height: clamp(170px, 28vh, 260px); font-size: calc(clamp(110px, 19vh, 170px) * var(--fs)); }

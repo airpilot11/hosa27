@@ -1,4 +1,4 @@
-# hosa27 App Scoring Sheet (DRAFT v0.5 (app v0.10.0 items), FREEZE BY DEC 4, 2026)
+# hosa27 App Scoring Sheet (DRAFT v0.6 (app v0.10.2 items), FREEZE BY DEC 4, 2026)
 
 Human scorers and the AI use this exact sheet. Total = 30 points, in the same 8 areas and with the same point values as the MoCA. Do not change it after real data collection starts.
 Record the date you froze it here: ________
@@ -10,12 +10,11 @@ Record the date you froze it here: ________
 - No partial credit unless the item's rule says so.
 - Do not use the participant's health, age, education or anything outside the recording.
 
-## Orientation (3 recordings, 2 questions each, 1 point per question = 6 points)
-Each recording answers two questions. Score each question separately and add them (0, 1 or 2).
-- **orient_daydate**: 1 if the weekday matches exactly + 1 if the day-of-month number matches exactly (saying the full date is fine if the number is correct).
-- **orient_monthyear**: 1 if the month matches exactly + 1 if the year matches exactly ("twenty twenty-six" = 2026).
+## Orientation (2 recordings, 1 point per part = 6 points)
+Score each part separately and add them.
+- **orient_fulldate** (0–4): 1 if the weekday matches exactly + 1 if the month matches exactly + 1 if the day-of-month number matches exactly + 1 if the year matches exactly ("twenty twenty-six" = 2026). Any order is fine.
 - **orient_placecity**: 1 if they name the place, accepting a reasonable name for it (e.g., "the senior center", the center's name, or the building's name; naming only the city or "here" = 0 for this part) + 1 if the city matches (with or without the state).
-- If they answer only one of the two questions, score that one and give 0 for the other. A self-correction counts: score the final answer.
+- A part that is not said = 0 for that part. A self-correction counts: score the final answer.
 
 ## Executive: trail (2 points, scored automatically by the app)
 10 circles, 1-A-2-B-3-C-4-D-5-E (the same length as the MoCA trail). 1 point for tapping all 10 circles in order within 150 s, plus 1 more point if there was **at most 1** wrong tap (one touch-screen slip is allowed). A wrong tap does not move the trail forward, so the participant must find the right circle. (Not on the human sheet.)
@@ -28,8 +27,8 @@ Each recording answers two questions. Score each question separately and add the
   A flat rectangle or square, a box with missing or extra lines, or corners not joined = 0. Size and position on the screen do not matter.
 - **rotate_1, rotate_2** (1 each, scored automatically by the app): 3 choices per puzzle. 1 if the first tap is the shape that is the same as the top shape, just turned; 0 if a flipped (mirror) shape is tapped or there is no answer within 60 s. (Not on the human sheet.)
 
-## Naming (3 items, 1 point each)
-- **name_1**: anchor. **name_2**: guitar. **name_3**: turtle (also accept "tortoise").
+## Naming (1 recording, 3 pictures, 1 point each = 0–3)
+- **naming**: 1. anchor, 2. guitar, 3. turtle (also accept "tortoise"). Any order is fine; 1 point for each correct name.
 - A general category or description ("a boat thing", "a fruit", "an animal") = 0.
 
 ## Attention (6 points)
