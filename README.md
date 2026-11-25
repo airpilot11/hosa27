@@ -43,7 +43,7 @@ Practice runs are marked as practice and the scoring tools ignore them. The micr
 ### Voice (less robotic)
 The app plays a **voice pack** (one audio file per instruction) when there is one. Otherwise it uses the device's built-in voice. A voice pack sounds more natural, and every participant hears the identical recording, which is better standardization for your Methods section.
 
-- **Option A: Mac voice (current).** The pack uses **Ava (Enhanced)**, slowed to **80% speed without changing the pitch** (`--speed 0.8`, done by `tools/slow_audio.swift`, because Enhanced voices ignore the speed setting), with pauses at commas, saved at 44.1 kHz / 96 kbps (the old 22 kHz / 35 kbps files sounded muffled). Ava's own quality is limited, so some words can still sound slurred. Rebuild after changing any `say` text:
+- **Option A: Mac voice (current).** The pack uses **Ava (Premium)** (since v0.10.1; was Ava Enhanced), slowed to **80% speed without changing the pitch** (`--speed 0.8`, done by `tools/slow_audio.swift`, because Enhanced voices ignore the speed setting), with pauses at commas, saved at 44.1 kHz / 96 kbps (the old 22 kHz / 35 kbps files sounded muffled). Ava's own quality is limited, so some words can still sound slurred. Rebuild after changing any `say` text:
   ```bash
   python3 tools/make_voice_audio.py
   ```
