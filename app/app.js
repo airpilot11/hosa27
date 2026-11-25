@@ -1735,8 +1735,21 @@
   }
 
   // ---------------------------------------------------------------- boot
+  // Updates (v0.10.4): always check the server for a new sw.js (never a browser-cached copy). When a new version
+  // has finished downloading and takes over, reload to show it, but ONLY when no participant is in a session:
+  // automatically if the app was just opened, otherwise via a tap-to-update banner on the staff screen.
   if ("serviceWorker" in navigator && location.protocol === "https:") {
-    navigator.serviceWorker.register("sw.js").catch(() => {});
+    const bootAt = Date.now(); const hadController = !!navigator.serviceWorker.controller; let reloading = false;
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then((reg) => reg.update()).catch(() => {});
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!hadController || reloading || session) return;   // first install, or a participant is mid-session
+      if (Date.now() - bootAt < 10000) { reloading = true; location.reload(); return; }
+      if (document.getElementById("updBanner")) return;
+      const b = document.createElement("button");
+      b.id = "updBanner"; b.className = "upd-banner"; b.textContent = "🔄 A new version of the app is ready. Tap here to load it.";
+      b.onclick = () => { if (!session) { reloading = true; location.reload(); } };
+      document.body.appendChild(b);
+    });
   }
   checkPersisted().then(() => setupScreen());
 })();

@@ -6,7 +6,7 @@
 // collection starts. The version number is saved into every session.
 // =====================================================================
 
-const HOSA27_VERSION = "0.10.3";
+const HOSA27_VERSION = "0.10.4";
 
 // What participants see (header, welcome screen, footer). Edit freely.
 const STUDY = {
